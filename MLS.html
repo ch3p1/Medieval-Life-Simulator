@@ -245,7 +245,9 @@
         .bar-fill { height: 100%; transition: width 0.3s; }
         .stress-fill { background: var(--stress); }
         .perf-fill { background: var(--success); }
-        .affinity-fill { background: #db2777; }
+        .friend-fill { background: #16a34a; }
+        .enemy-fill { background: #dc2626; }
+        .romance-fill { background: #db2777; }
         
         .job-card {
             border: 2px solid var(--leather);
@@ -732,8 +734,8 @@
                 { text: 'Cry for help', type: 'flavor', effect: () => { if(getParent()) log("Your parent comforts you."); else log("No one comes."); } }
             ]),
             createEvent('inf_first_words', 'First Words', 'You feel a desire to speak.', [
-                { text: 'Say "Mama"', type: 'flavor', effect: () => { if(hasParent('Mother')) { modRel(getParent('Mother').id, 10); log("Mother is delighted."); } else log("You call out to the void."); } },
-                { text: 'Say "Dada"', type: 'flavor', effect: () => { if(hasParent('Father')) { modRel(getParent('Father').id, 10); log("Father beams with pride."); } else log("You call out to the void."); } },
+                { text: 'Say "Mama"', type: 'flavor', effect: () => { if(hasParent('Mother')) { modRel(getParent('Mother').id, 10, 0); log("Mother is delighted."); } else log("You call out to the void."); } },
+                { text: 'Say "Dada"', type: 'flavor', effect: () => { if(hasParent('Father')) { modRel(getParent('Father').id, 10, 0); log("Father beams with pride."); } else log("You call out to the void."); } },
                 { text: 'Say "Food"', type: 'flavor', effect: () => { state.stats.con++; log("Priorities. (+1 CON)"); } }
             ])
         ],
@@ -746,7 +748,7 @@
             createEvent('child_find', 'Lost Heirloom', 'Digging in the mud, you hit metal.', [
                 { text: 'Clean it off', type: 'check', stat: 'int', dc: 10, success: 'It is a silver locket!', fail: 'Just rusty scrap.', onSuccess: () => addItem('Rusted Locket', 'Common', 'Once held a portrait.', 5), onFail: () => {} },
                 { text: 'Bury it', type: 'flavor', effect: () => log("Some secrets should stay buried.") },
-                { text: 'Show parent', type: 'flavor', effect: () => { if(getParent()) { modRel(getParent().id, 5); log("They pat your head."); } else log("You have no one to show."); } }
+                { text: 'Show parent', type: 'flavor', effect: () => { if(getParent()) { modRel(getParent().id, 5, 0); log("They pat your head."); } else log("You have no one to show."); } }
             ]),
             createEvent('child_parent_lesson', 'A Lesson', 'Your parent tries to teach you a trade.', [
                 { text: 'Listen intently', type: 'check', stat: 'wis', dc: 10, success: 'You learn well. (+1 WIS)', fail: 'You get bored.', onSuccess: () => state.stats.wis++, onFail: () => {} },
@@ -828,7 +830,7 @@
         ],
         Interactive: [
             createEvent('inter_bump', 'A Chance Encounter', 'You bump into a stranger carrying a heavy load.', [
-                { text: 'Help them', type: 'check', stat: 'str', dc: 10, success: 'They thank you profusely. (+Relationship)', fail: 'You drop it. They yell at you.', onSuccess: () => createRandomRel(20), onFail: () => {} },
+                { text: 'Help them', type: 'check', stat: 'str', dc: 10, success: 'They thank you profusely. (+Friendship)', fail: 'You drop it. They yell at you.', onSuccess: () => createRandomRel(20), onFail: () => {} },
                 { text: 'Walk away', type: 'flavor', effect: () => log("Not your problem.") }
             ])
         ]
@@ -1005,7 +1007,7 @@
         });
     }
 
-    function addRelationship(name, relation, affinity, gender, rank, locIndex = null) {
+    function addRelationship(name, relation, friendship, gender, rank, locIndex = null) {
         const location = locIndex !== null ? locIndex : Math.floor(Math.random() * CITIES.length);
         const careerKeys = Object.keys(CAREERS);
         const rndJobKey = careerKeys[Math.floor(Math.random() * careerKeys.length)];
@@ -1013,7 +1015,10 @@
         
         const person = {
             id: Math.random().toString(36).substr(2, 9),
-            name, relation, affinity, gender, rank, locationIndex: location,
+            name, relation, 
+            friendship: friendship || 0, // -100 to 100
+            romance: 0, // 0 to 100
+            gender, rank, locationIndex: location,
             age: 18 + Math.floor(Math.random()*40),
             health: "Healthy",
             occupation: rndJob,
@@ -1031,10 +1036,10 @@
         return person;
     }
 
-    function createRandomRel(affinity) {
+    function createRandomRel(friendship) {
         const gender = Math.random() > 0.5 ? 'Male' : 'Female';
         const name = getRandomName(gender);
-        addRelationship(name, "Acquaintance", affinity, gender, "Commoner", state.location);
+        addRelationship(name, "Acquaintance", friendship, gender, "Commoner", state.location);
         log(`You met ${name}.`);
     }
 
@@ -1094,6 +1099,19 @@
         const hpGain = Math.max(1, 1 + conMod);
         state.maxHealth += hpGain;
         state.health = Math.min(state.maxHealth, state.health + hpGain);
+
+        // NPC Decay & Travel
+        state.relationships.forEach(r => {
+            // Decay
+            if (r.friendship > 0) r.friendship = Math.max(0, r.friendship - 5);
+            if (r.romance > 0) r.romance = Math.max(0, r.romance - 10);
+            
+            // Travel (10% chance)
+            if (Math.random() < 0.1) {
+                r.locationIndex = Math.floor(Math.random() * CITIES.length);
+                if (r.friendship > 50) log(`${r.name} moved to ${CITIES[r.locationIndex].name}.`);
+            }
+        });
 
         document.getElementById('year-display').innerText = `Year ${state.year}`;
         document.getElementById('age-display').innerText = state.age;
@@ -1291,9 +1309,20 @@
         const loc = CITIES[r.locationIndex].name;
         const isKnight = r.rank === 'Sir' || r.rank === 'Dame';
         
-        let squireBtn = '';
-        if (isKnight && state.age >= 12 && state.occupation?.id !== 'squire') {
-            squireBtn = `<button onclick="askToSquire('${id}')" class="w-full bg-amber-800 text-white p-2 rounded mt-2">Ask to Squire</button>`;
+        let actions = '';
+        if (state.location === r.locationIndex) {
+            actions = `
+                <button onclick="interact('${id}', 'chat')" class="choice-btn text-sm">Chat (Friendly)</button>
+                <button onclick="interact('${id}', 'joke')" class="choice-btn text-sm">Joke (Funny)</button>
+                <button onclick="interact('${id}', 'insult')" class="choice-btn text-sm">Insult (Mean)</button>
+                <button onclick="interact('${id}', 'flirt')" class="choice-btn text-sm">Flirt (Romance)</button>
+                <button onclick="interact('${id}', 'gift')" class="choice-btn text-sm">Gift (5g)</button>
+            `;
+            if (isKnight && state.age >= 12 && state.occupation?.id !== 'squire') {
+                actions += `<button onclick="askToSquire('${id}')" class="choice-btn text-sm mt-2 bg-amber-800">Ask to Squire</button>`;
+            }
+        } else {
+            actions = `<button onclick="interact('${id}', 'letter')" class="choice-btn text-sm">Send Letter (1g)</button>`;
         }
 
         let html = `
@@ -1315,25 +1344,32 @@
                 </div>
             </div>
 
-            <h4 class="font-bold text-xs uppercase mb-1 opacity-70">Attributes</h4>
-            <div class="grid grid-cols-6 gap-1 mb-4 text-center">
-                ${Object.keys(r.stats).map(k => `
-                    <div class="bg-black/5 p-1 rounded">
-                        <div class="text-[10px] font-bold uppercase">${k}</div>
-                        <div class="text-sm font-bold">${r.stats[k]}</div>
-                    </div>
-                `).join('')}
+            <div class="mb-4 space-y-2">
+                <div>
+                    <div class="flex justify-between text-xs mb-1"><span>Friendship (${getRelLabel(r.friendship)})</span><span>${r.friendship}</span></div>
+                    <div class="bar-container"><div class="bar-fill ${r.friendship >= 0 ? 'friend-fill' : 'enemy-fill'}" style="width:${Math.abs(r.friendship)}%"></div></div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-xs mb-1"><span>Romance</span><span>${r.romance}</span></div>
+                    <div class="bar-container"><div class="bar-fill romance-fill" style="width:${r.romance}%"></div></div>
+                </div>
             </div>
             
-            <div class="mb-4">
-                <div class="flex justify-between text-xs mb-1"><span>Affinity</span><span>${r.affinity}%</span></div>
-                <div class="w-full h-3 bg-black/10 rounded overflow-hidden"><div class="h-full bg-pink-600" style="width:${r.affinity}%"></div></div>
+            <div class="grid grid-cols-2 gap-2">
+                ${actions}
             </div>
-            
-            ${squireBtn}
         `;
         document.getElementById('npc-content').innerHTML = html;
         document.getElementById('npc-modal').classList.remove('hidden');
+    }
+
+    function getRelLabel(val) {
+        if (val <= -50) return "Enemy";
+        if (val < 0) return "Disliked";
+        if (val < 30) return "Acquaintance";
+        if (val < 60) return "Friend";
+        if (val < 90) return "Good Friend";
+        return "Best Friend";
     }
 
     function askToSquire(id) {
@@ -1341,7 +1377,7 @@
         closeNPC();
         // Check check
         const roll = rollD20(getModifier(state.stats.str));
-        if (roll.total >= 12 && r.affinity >= 30) {
+        if (roll.total >= 12 && r.friendship >= 30) {
             log(`<strong class="text-green-800">Success!</strong> ${r.name} accepts you as a squire.`);
             joinJob('squire'); // Using the new squire career
         } else {
@@ -1377,6 +1413,51 @@
             const newTitle = career.ranks[occ.rankIndex].title;
             log(`<strong class="text-green-800">PROMOTION:</strong> Raised to ${newTitle}!`);
             modRep('renown', 10);
+        }
+    }
+
+    function renderOccupationTab() {
+        const container = document.getElementById('occ-content');
+        if (!state.occupation) {
+            let html = `<p class="italic mb-4">You currently have no vocation.</p><div class="space-y-2">`;
+            const historyIds = Object.keys(state.jobHistory);
+            if (historyIds.length > 0) {
+                html += `<h4 class="font-bold border-b border-black/10 mb-2">Resume Career</h4>`;
+                historyIds.forEach(hid => {
+                    const hist = state.jobHistory[hid];
+                    const c = CAREERS[hid];
+                    html += `<button onclick="joinJob('${hid}')" class="choice-btn text-sm mb-2 border-l-4 border-amber-600"><span>Resume: ${c.ranks[hist.rankIndex].title}</span></button>`;
+                });
+                html += `<h4 class="font-bold border-b border-black/10 mb-2 mt-4">New Career</h4>`;
+            }
+            for (let id in CAREERS) {
+                if (id === 'squire') continue; // Special entry only
+                const c = CAREERS[id];
+                let canJoin = true;
+                if (c.req.age && state.age < c.req.age) canJoin = false;
+                if (c.req.stat && state.stats[c.req.stat] < c.req.val) canJoin = false;
+                if (c.req.flag && !state.flags[c.req.flag]) canJoin = false;
+                if (canJoin) html += `<button onclick="joinJob('${id}')" class="choice-btn text-sm"><span>${c.name}: ${c.ranks[0].title}</span><span class="opacity-70">${c.ranks[0].wage} GP/yr</span></button>`;
+            }
+            container.innerHTML = html;
+        } else {
+            const occ = state.occupation;
+            const jobData = CAREERS[occ.id].ranks[occ.rankIndex];
+            container.innerHTML = `
+                <div class="job-card">
+                    <h3 class="font-bold text-xl">${jobData.title}</h3>
+                    <p class="text-sm opacity-70">${CAREERS[occ.id].name} - Rank ${occ.rankIndex + 1}</p>
+                    <div class="mt-2 text-sm">Wage: ${jobData.wage} GP/yr</div>
+                    <div class="mt-4"><div class="text-xs flex justify-between"><span>Performance</span><span>${occ.performance}%</span></div><div class="bar-container"><div class="bar-fill perf-fill" style="width: ${occ.performance}%"></div></div></div>
+                    <div class="mt-2"><div class="text-xs flex justify-between"><span>Stress</span><span>${occ.stress}%</span></div><div class="bar-container"><div class="bar-fill stress-fill" style="width: ${occ.stress}%"></div></div></div>
+                </div>
+                <div class="flex gap-2 text-xs mb-4">
+                    <button onclick="setStance('slack')" class="p-2 border rounded ${occ.workStance==='slack'?'bg-amber-300':'bg-white'}">Slack</button>
+                    <button onclick="setStance('normal')" class="p-2 border rounded ${occ.workStance==='normal'?'bg-amber-500 text-white':'bg-white'}">Normal</button>
+                    <button onclick="setStance('intense')" class="p-2 border rounded ${occ.workStance==='intense'?'bg-red-800 text-white':'bg-white'}">Intense</button>
+                </div>
+                <button onclick="quitJob()" class="w-full border border-red-800 text-red-800 p-2 rounded hover:bg-red-100">Quit Job</button>
+            `;
         }
     }
 
@@ -1420,28 +1501,78 @@
         if(!rel) return;
 
         state.interactions[id] = true;
+        const align = rel.alignment || 'True Neutral';
+        const isEvil = align.includes('Evil');
+        const isGood = align.includes('Good');
+        const isChaotic = align.includes('Chaotic');
+        const isLawful = align.includes('Lawful');
 
+        let msg = "";
+        let mod = 0;
+
+        // Base Logic
         if (action === 'chat') {
-            rel.affinity = Math.min(100, rel.affinity + 5);
-            log(`You chatted with ${rel.name}.`);
-        } else if (action === 'gift') {
-            if (state.gold >= 5) {
-                state.gold -= 5;
-                rel.affinity = Math.min(100, rel.affinity + 10);
-                log(`You gave ${rel.name} a gift. (+Affinity)`);
+            mod = 5;
+            if (isGood) mod += 3;
+            if (isEvil) mod -= 2;
+            rel.friendship = Math.min(100, rel.friendship + mod);
+            msg = `You chatted with ${rel.name}.`;
+        } 
+        else if (action === 'joke') {
+            mod = 5;
+            if (isChaotic) mod += 5;
+            if (isLawful) mod -= 3;
+            rel.friendship = Math.min(100, rel.friendship + mod);
+            msg = `You told a joke to ${rel.name}.`;
+        }
+        else if (action === 'insult') {
+            mod = -10;
+            if (isEvil) mod = -2; // Evil respects boldness?
+            if (isGood) mod = -15;
+            rel.friendship = Math.max(-100, rel.friendship + mod);
+            msg = `You insulted ${rel.name}.`;
+        }
+        else if (action === 'flirt') {
+            if (rel.friendship > 20) {
+                const roll = rollD20(getModifier(state.stats.cha));
+                if (roll.total > 10) {
+                    rel.romance = Math.min(100, rel.romance + 10);
+                    msg = `You flirted with ${rel.name}. It went well!`;
+                } else {
+                    rel.friendship -= 2;
+                    msg = `You flirted, but it was awkward.`;
+                }
             } else {
-                log(`Not enough gold to buy a gift.`);
-            }
-        } else if (action === 'letter') {
-            if (state.gold >= 1) {
-                state.gold -= 1;
-                rel.affinity = Math.min(100, rel.affinity + 2);
-                log(`Sent a letter to ${rel.name} in ${CITIES[rel.locationIndex].name}.`);
-            } else {
-                log("Not enough gold for postage.");
+                rel.friendship -= 5;
+                msg = `${rel.name} rejected your advances.`;
             }
         }
+        else if (action === 'gift') {
+            if (state.gold >= 5) {
+                state.gold -= 5;
+                rel.friendship = Math.min(100, rel.friendship + 10);
+                if (rel.romance > 0) rel.romance += 5;
+                msg = `You gave ${rel.name} a gift.`;
+            } else {
+                msg = `Not enough gold.`;
+                state.interactions[id] = false; // Refund action
+            }
+        } 
+        else if (action === 'letter') {
+            if (state.gold >= 1) {
+                state.gold -= 1;
+                rel.friendship = Math.min(100, rel.friendship + 2);
+                msg = `Sent a letter to ${rel.name}.`;
+            } else {
+                msg = "Not enough gold.";
+                state.interactions[id] = false;
+            }
+        }
+        
+        log(msg);
         updateUI();
+        closeNPC();
+        switchTab('log');
     }
 
     function renderRelTab() {
@@ -1453,20 +1584,8 @@
 
         container.innerHTML = state.relationships.map(r => {
             const locName = CITIES[r.locationIndex].name;
-            const sameCity = r.locationIndex === state.location;
+            const status = r.romance > 50 ? "❤️ Partner" : getRelLabel(r.friendship);
             
-            let actions = '';
-            if (sameCity) {
-                actions = `
-                    <button onclick="interact('${r.id}', 'chat')" class="text-[10px] bg-white border border-[#5d4037] px-2 py-0.5 rounded hover:bg-amber-100" ${state.interactions[r.id] ? 'disabled style="opacity:0.5"' : ''}>Chat</button>
-                    <button onclick="interact('${r.id}', 'gift')" class="text-[10px] bg-white border border-[#5d4037] px-2 py-0.5 rounded hover:bg-amber-100" ${state.interactions[r.id] ? 'disabled style="opacity:0.5"' : ''}>Gift (5g)</button>
-                `;
-            } else {
-                actions = `
-                    <button onclick="interact('${r.id}', 'letter')" class="text-[10px] bg-white border border-[#5d4037] px-2 py-0.5 rounded hover:bg-amber-100" ${state.interactions[r.id] ? 'disabled style="opacity:0.5"' : ''}>Send Letter (1g)</button>
-                `;
-            }
-
             return `
             <div class="rel-card" onclick="openNPC('${r.id}')">
                 <div>
@@ -1474,14 +1593,12 @@
                     <div class="text-xs opacity-70">${r.relation} • ${r.rank}</div>
                     <div class="text-xs text-amber-900 font-bold">📍 ${locName}</div>
                 </div>
-                <div class="flex flex-col items-end gap-1">
-                    <div class="text-xs font-bold">${r.affinity}%</div>
-                    <div class="w-24 h-2 bg-black/10 rounded overflow-hidden">
-                        <div class="h-full affinity-fill" style="width: ${r.affinity}%"></div>
+                <div class="flex flex-col items-end gap-1 w-24">
+                    <div class="text-xs font-bold">${status}</div>
+                    <div class="w-full h-1 bg-black/10 rounded overflow-hidden">
+                        <div class="h-full ${r.friendship >= 0 ? 'friend-fill' : 'enemy-fill'}" style="width:${Math.abs(r.friendship)}%"></div>
                     </div>
-                    <div class="flex gap-1 mt-1" onclick="event.stopPropagation()">
-                        ${actions}
-                    </div>
+                    ${r.romance > 0 ? `<div class="w-full h-1 bg-black/10 rounded overflow-hidden"><div class="h-full romance-fill" style="width:${r.romance}%"></div></div>` : ''}
                 </div>
             </div>`;
         }).join('');
@@ -1561,51 +1678,6 @@
         updateUI();
     }
 
-    function renderOccupationTab() {
-        const container = document.getElementById('occ-content');
-        if (!state.occupation) {
-            let html = `<p class="italic mb-4">You currently have no vocation.</p><div class="space-y-2">`;
-            const historyIds = Object.keys(state.jobHistory);
-            if (historyIds.length > 0) {
-                html += `<h4 class="font-bold border-b border-black/10 mb-2">Resume Career</h4>`;
-                historyIds.forEach(hid => {
-                    const hist = state.jobHistory[hid];
-                    const c = CAREERS[hid];
-                    html += `<button onclick="joinJob('${hid}')" class="choice-btn text-sm mb-2 border-l-4 border-amber-600"><span>Resume: ${c.ranks[hist.rankIndex].title}</span></button>`;
-                });
-                html += `<h4 class="font-bold border-b border-black/10 mb-2 mt-4">New Career</h4>`;
-            }
-            for (let id in CAREERS) {
-                if (id === 'squire') continue; // Special entry only
-                const c = CAREERS[id];
-                let canJoin = true;
-                if (c.req.age && state.age < c.req.age) canJoin = false;
-                if (c.req.stat && state.stats[c.req.stat] < c.req.val) canJoin = false;
-                if (c.req.flag && !state.flags[c.req.flag]) canJoin = false;
-                if (canJoin) html += `<button onclick="joinJob('${id}')" class="choice-btn text-sm"><span>${c.name}: ${c.ranks[0].title}</span><span class="opacity-70">${c.ranks[0].wage} GP/yr</span></button>`;
-            }
-            container.innerHTML = html;
-        } else {
-            const occ = state.occupation;
-            const jobData = CAREERS[occ.id].ranks[occ.rankIndex];
-            container.innerHTML = `
-                <div class="job-card">
-                    <h3 class="font-bold text-xl">${jobData.title}</h3>
-                    <p class="text-sm opacity-70">${CAREERS[occ.id].name} - Rank ${occ.rankIndex + 1}</p>
-                    <div class="mt-2 text-sm">Wage: ${jobData.wage} GP/yr</div>
-                    <div class="mt-4"><div class="text-xs flex justify-between"><span>Performance</span><span>${occ.performance}%</span></div><div class="bar-container"><div class="bar-fill perf-fill" style="width: ${occ.performance}%"></div></div></div>
-                    <div class="mt-2"><div class="text-xs flex justify-between"><span>Stress</span><span>${occ.stress}%</span></div><div class="bar-container"><div class="bar-fill stress-fill" style="width: ${occ.stress}%"></div></div></div>
-                </div>
-                <div class="flex gap-2 text-xs mb-4">
-                    <button onclick="setStance('slack')" class="p-2 border rounded ${occ.workStance==='slack'?'bg-amber-300':'bg-white'}">Slack</button>
-                    <button onclick="setStance('normal')" class="p-2 border rounded ${occ.workStance==='normal'?'bg-amber-500 text-white':'bg-white'}">Normal</button>
-                    <button onclick="setStance('intense')" class="p-2 border rounded ${occ.workStance==='intense'?'bg-red-800 text-white':'bg-white'}">Intense</button>
-                </div>
-                <button onclick="quitJob()" class="w-full border border-red-800 text-red-800 p-2 rounded hover:bg-red-100">Quit Job</button>
-            `;
-        }
-    }
-
     function renderInventory() {
         const list = document.getElementById('inventory-list');
         if (state.inventory.length === 0) { list.innerHTML = `<p class="italic opacity-50">Your satchel is empty.</p>`; return; }
@@ -1638,9 +1710,12 @@
 
     function modRep(type, amt) { state.reputation[type] += amt; }
     
-    function modRel(id, amt) {
+    function modRel(id, amt, romanceAmt = 0) {
         const r = state.relationships.find(x => x.id === id);
-        if(r) r.affinity = Math.min(100, Math.max(0, r.affinity + amt));
+        if(r) {
+            r.friendship = Math.min(100, Math.max(-100, r.friendship + amt));
+            if (romanceAmt !== 0) r.romance = Math.min(100, Math.max(0, r.romance + romanceAmt));
+        }
     }
 
     function checkUnlocks() {
