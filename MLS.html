@@ -428,6 +428,28 @@
         .item-rarity-Legendary { color: var(--legendary); font-weight: bold; text-shadow: 0 0 3px rgba(234,88,12,0.4); }
         .item-rarity-Artifact { color: var(--artifact); font-weight: bold; text-shadow: 0 0 5px rgba(202,138,4,0.5); }
 
+        /* Grave Styling */
+        .grave-card {
+            background: rgba(0,0,0,0.05);
+            border: 2px solid #5d4037;
+            border-radius: 8px 8px 0 0;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            position: relative;
+            border-bottom: 4px solid #2c1e16;
+        }
+        .grave-stone {
+            text-align: center;
+            border: 2px solid #2c1e16;
+            background: #a8a29e;
+            padding: 1rem;
+            border-radius: 50% 50% 0 0;
+            width: 150px;
+            margin: 0 auto 1rem auto;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            color: #2c1e16;
+        }
+
         /* Activities Styling */
         .act-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .act-btn { text-align: center; padding: 15px 5px; flex-direction: column; gap: 5px; height: 100px; justify-content: center; }
@@ -468,14 +490,11 @@
 <body>
 
 <!-- Audio Elements -->
-<audio id="bgm-music" loop>
-    <source src="https://upload.wikimedia.org/wikipedia/commons/e/ec/Kevin_MacLeod_-_Folk_Round.ogg" type="audio/ogg">
-</audio>
-<!-- Note: Using a public domain track from Kevin MacLeod as placeholder -->
+<!-- Music Removed -->
 
 <div class="parchment-container">
     <div class="absolute top-2 right-12 z-50">
-        <button onclick="toggleMusic()" class="text-xl opacity-70 hover:opacity-100" title="Toggle Music">🎵</button>
+        <!-- Music Toggle Removed -->
     </div>
     <button class="settings-btn" onclick="openSettings()">⚙️</button>
 
@@ -485,6 +504,7 @@
             <h2 class="text-3xl font-medieval mb-4">Settings</h2>
             <p class="mb-6 italic">Manage your journey.</p>
             <div class="flex flex-col gap-3">
+                <button id="btn-sound-toggle" onclick="toggleSoundSetting()" class="choice-btn text-center justify-center">Sound Effects: ON</button>
                 <button onclick="restartGame()" class="choice-btn text-center justify-center bg-red-800 text-white">Restart Chronicle (Delete Save)</button>
                 <button onclick="closeSettings()" class="choice-btn text-center justify-center">Return to Game</button>
             </div>
@@ -537,7 +557,7 @@
     <!-- Character Creation Overlay -->
     <div id="creation-screen" class="creation-screen">
         <h2 class="text-5xl font-bold mb-2 text-amber-900" style="font-family: 'MedievalSharp';">A Medieval Life</h2>
-        <p class="italic mb-8 text-lg opacity-70">A game by Arcane Architect.</p>
+        <p class="italic mb-8 text-lg opacity-70">A game by Juanse Gutierrez.</p>
         
         <div class="max-w-xl mx-auto w-full bg-white/40 p-6 rounded-lg border-2 border-[#5d4037] shadow-xl">
             <h3 class="text-xl font-bold mb-4">Forge Your Destiny</h3>
@@ -598,6 +618,7 @@
             <div id="tab-act" class="tab-btn" onclick="switchTab('act')">🎭 Activities</div>
             <div id="tab-map" class="tab-btn" onclick="switchTab('map')">🗺️ Map</div>
             <div id="tab-inv" class="tab-btn" onclick="switchTab('inv')">🎒 Inventory</div>
+            <div id="tab-cem" class="tab-btn" onclick="switchTab('cem')">🪦 Cemetery</div>
             
             <div class="mt-auto p-4 border-t border-black/10 text-xs">
                 <div class="font-bold mb-1">Unlocks</div>
@@ -699,6 +720,13 @@
                     <p class="italic opacity-50">Your satchel is empty.</p>
                 </div>
             </div>
+
+            <!-- Tab: Cemetery -->
+            <div id="cem-tab" class="tab-content hidden p-6 overflow-y-auto">
+                <h2 class="text-3xl font-medieval mb-4 border-b border-black/20 pb-2">Family Cemetery</h2>
+                <p class="italic mb-4 text-sm">Here lie those who came before. Tread carefully.</p>
+                <div id="cemetery-content"></div>
+            </div>
         </div>
     </div>
 </div>
@@ -714,6 +742,7 @@
             this.ctx = new AudioContext();
         },
         pulse: function() {
+            if(!state.settings.sound) return; // Check setting
             if(!this.ctx) this.init();
             const osc = this.ctx.createOscillator();
             const gain = this.ctx.createGain();
@@ -726,27 +755,23 @@
             gain.connect(this.ctx.destination);
             osc.start();
             osc.stop(this.ctx.currentTime + 0.3);
-        },
-        warChant: function() {
-            if(!this.ctx) this.init();
-            // Simulating a low drone/chant
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(60, this.ctx.currentTime);
-            gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
-            gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 2.5);
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start();
-            osc.stop(this.ctx.currentTime + 2.5);
         }
+        // Removed warChant to clean up code
     };
 
-    function toggleMusic() {
-        const audio = document.getElementById('bgm-music');
-        if (audio.paused) audio.play();
-        else audio.pause();
+    // Global Click Listener for Sound
+    document.addEventListener('click', (e) => {
+        // If clicking a button or something inside a button
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+            AudioEngine.pulse();
+        }
+    });
+
+    function toggleSoundSetting() {
+        state.settings.sound = !state.settings.sound;
+        const btn = document.getElementById('btn-sound-toggle');
+        btn.innerText = `Sound Effects: ${state.settings.sound ? 'ON' : 'OFF'}`;
+        btn.style.opacity = state.settings.sound ? '1' : '0.6';
     }
 
     // 1. D&D 5e MECHANICS
@@ -791,6 +816,7 @@
 
     // 2. STATE MANAGEMENT
     const state = {
+        settings: { sound: true }, // Added Settings
         name: "Unknown",
         gender: "Male",
         age: 0,
@@ -812,6 +838,7 @@
         jobHistory: {}, 
         traits: [],
         inventory: [],
+        eventQueue: [], // NEW: Stores events for the current year
         flags: {
             literate: false,
             criminal: false,
@@ -1027,6 +1054,27 @@
     // 5. EVENT POOLS
     const createEvent = (id, title, text, choices) => ({ id, title, text, choices });
     const POOLS = {
+        Canon: [
+            createEvent('canon_raid', 'Goblin Raid', 'Screams echo in the night! Goblins are raiding the outskirts of the city.', [
+                { text: 'Fight them off', type: 'check', stat: 'str', dc: 14, success: 'You cleave through their ranks! The city is safe. (+Renown)', fail: 'They overwhelm you before fleeing. (-HP, -Honor)', onSuccess: () => { modRep('renown', 15); }, onFail: () => { takeDamage(8); modRep('honor', -5); } },
+                { text: 'Hide', type: 'check', stat: 'dex', dc: 12, success: 'You survive unharmed, but the guilt lingers. (-Honor)', fail: 'They find your hiding spot! (-HP)', onSuccess: () => { modRep('honor', -5); }, onFail: () => { takeDamage(6); } },
+                { text: 'Rally the Guards', type: 'check', stat: 'cha', dc: 15, success: 'Your voice commands order from chaos! (+Renown, +Honor)', fail: 'Your voice cracks. No one listens.', onSuccess: () => { modRep('renown', 10); modRep('honor', 10); }, onFail: () => {} }
+            ]),
+            createEvent('canon_spirit', 'The Ancestral Spirit', 'A ghostly figure manifests at the foot of your bed.', [
+                { text: 'Listen to its wisdom', type: 'check', stat: 'wis', dc: 16, success: 'It whispers secrets of the cosmos. (+1 INT, +1 WIS)', fail: 'The knowledge shatters your mind. (-Sanity)', onSuccess: () => { state.stats.int++; state.stats.wis++; }, onFail: () => { modSanity(-3); } },
+                { text: 'Banish it', type: 'check', stat: 'cha', dc: 13, success: 'The spirit fades. You feel safer.', fail: 'It laughs and curses you. (Haunted)', onSuccess: () => { modSanity(2); }, onFail: () => { addTrait('Haunted'); modSanity(-2); } },
+                { text: 'Offer Coin', type: 'flavor', effect: () => { state.gold = Math.max(0, state.gold - 10); log("The spirit ignores your material offering and vanishes."); } }
+            ]),
+            createEvent('canon_bear', 'The Great Bear', 'A massive bear has wandered into the market square!', [
+                { text: 'Slay it', type: 'check', stat: 'str', dc: 15, success: 'A mighty trophy! (+Renown, +Meat)', fail: 'It mauls you severely. (-HP)', onSuccess: () => { modRep('renown', 10); addItem('Bear Pelt', 'Uncommon', 'Thick fur.', 40); }, onFail: () => { takeDamage(12); } },
+                { text: 'Calm it', type: 'check', stat: 'wis', dc: 16, success: 'The beast bows to you and leaves. (+Piety)', fail: 'It roars and attacks!', onSuccess: () => { modRep('piety', 15); addTrait('Beast Friend'); }, onFail: () => { takeDamage(10); } },
+                { text: 'Run', type: 'check', stat: 'dex', dc: 10, success: 'You escape.', fail: 'You trip and scrape your knee.', onSuccess: () => {}, onFail: () => takeDamage(2) }
+            ]),
+            createEvent('canon_plague', 'The Black Cough', 'A sickness spreads through the district.', [
+                { text: 'Help the sick', type: 'check', stat: 'con', dc: 14, success: 'You resist the plague and save lives. (+Renown, +Piety)', fail: 'You catch the sickness. (-1 CON)', onSuccess: () => { modRep('renown', 10); modRep('piety', 10); }, onFail: () => { state.stats.con = Math.max(3, state.stats.con - 1); log("The sickness weakens you permanently."); } },
+                { text: 'Isolate', type: 'flavor', effect: () => { modSanity(-1); log("You survive, alone."); } }
+            ])
+        ],
         Infancy: [ 
             createEvent('inf_omen', 'Astrological Omen', 'The village elder casts bones upon your crib.', [
                 { text: 'Smile at the Elder', type: 'flavor', effect: () => { state.stats.cha++; modRep('renown', 2); log(`The Elder smiles back. "A charmer," she says. (+1 CHA)`); } },
@@ -1400,6 +1448,59 @@
         }
     }
 
+    function checkInheritance() {
+        if (!state.house || !state.house.members) return;
+
+        // 1. Identify the current ruling Lord/Lady
+        // We filter for exact titles to avoid picking up Emeritus/Dowager
+        let ruler = state.house.members.find(m => 
+            (m.rank === 'Lord' || m.rank === 'Lady' || m.rank === 'King' || m.rank === 'Queen')
+        );
+
+        if (!ruler) return; // No ruler found?
+
+        let rulerIsDead = false;
+
+        if (ruler.id === 'PLAYER') {
+            // Player death is handled by death(), but let's check just in case
+            if (state.health <= 0) rulerIsDead = true; 
+        } else {
+            const rel = state.relationships.find(r => r.id === ruler.id);
+            if (rel && rel.health === 'Deceased') rulerIsDead = true;
+        }
+
+        if (rulerIsDead) {
+            // Demote dead ruler
+            ruler.rank = ruler.gender === 'Male' ? 'Lord Emeritus' : 'Dowager Lady';
+            if (ruler.id !== 'PLAYER') {
+                log(`<strong style="color:var(--royal)">SUCCESSION:</strong> ${ruler.name} has passed. The House looks to the Heir.`);
+            }
+
+            // Find Heir
+            let heir = state.house.members.find(m => m.rank === 'Heir');
+            
+            if (heir) {
+                const newRank = heir.gender === 'Male' ? 'Lord' : 'Lady'; // Or King/Queen if royal, but sticking to simple for now
+                heir.rank = newRank;
+                
+                if (heir.id === 'PLAYER') {
+                    state.class = `${newRank} of House ${state.house.name}`;
+                    log(`<strong style="color:var(--gold)">ASCENSION:</strong> You are now the ${newRank} of House ${state.house.name}!`);
+                    modRep('renown', 50);
+                } else {
+                    log(`${heir.name} ascends as the new ${newRank} of House ${state.house.name}.`);
+                    // Update NPC relationship rank
+                    const heirRel = state.relationships.find(r => r.id === heir.id);
+                    if (heirRel) heirRel.rank = newRank;
+                }
+            } else {
+                log("The line of succession is broken. The House falls into chaos.");
+                state.house.treasury = Math.floor(state.house.treasury / 2);
+            }
+            updateUI();
+        }
+    }
+
     function createLesserHouseForPlayer() {
         const tierData = TIER_DATA['lesser'];
         const names = HOUSE_NAMES['lesser'];
@@ -1521,7 +1622,7 @@
     }
 
     function enterWorld() {
-        AudioEngine.warChant();
+        // AudioEngine.warChant(); // Removed
         document.getElementById('lore-modal').classList.add('hidden');
         document.querySelector('.header').style.opacity = 1;
         document.querySelector('.main-layout').style.opacity = 1;
@@ -1538,55 +1639,86 @@
         processYear();
     }
 
+    // --- NEW EVENT GENERATION SYSTEM ---
+    
+    function generateSocialEvent() {
+        // Filter living people we know
+        const livingKnown = state.relationships.filter(r => r.health !== 'Deceased');
+        if (livingKnown.length === 0) return null;
+
+        // Pick one weighted by interactions? Random for now.
+        const person = livingKnown[Math.floor(Math.random() * livingKnown.length)];
+        const isFriend = person.friendship > 20;
+        const isEnemy = person.friendship < -20;
+        const isLover = person.romance > 30;
+
+        let event = null;
+
+        if (isLover) {
+            event = createEvent(`soc_lover_${person.id}`, `Time with ${person.name}`, `Your partner, ${person.name}, asks for your time.`, [
+                { text: 'Romantic Walk', type: 'check', stat: 'cha', dc: 10, success: 'Sparks fly. (+Romance)', fail: 'It rains. Mood ruined.', onSuccess: () => modRel(person.id, 5, 5), onFail: () => modRel(person.id, 2, -2) },
+                { text: 'Buy Gift (10g)', type: 'flavor', req: (s) => s.gold >= 10, effect: () => { state.gold -= 10; modRel(person.id, 10, 10); log("They love it."); } },
+                { text: 'Argue', type: 'flavor', effect: () => { modRel(person.id, -5, -5); log("A petty squabble."); } }
+            ]);
+        } else if (isEnemy) {
+            event = createEvent(`soc_enemy_${person.id}`, `Rivalry: ${person.name}`, `${person.name} confronts you in the street!`, [
+                { text: 'Intimidate', type: 'check', stat: 'str', dc: 12, success: 'They back down in fear. (+Renown)', fail: 'They laugh at you.', onSuccess: () => { modRel(person.id, -5); modRep('renown', 5); }, onFail: () => modRep('honor', -2) },
+                { text: 'Ignore', type: 'check', stat: 'wis', dc: 10, success: 'You take the high road. (+Piety)', fail: 'Their insults get to you. (-Sanity)', onSuccess: () => modRep('piety', 5), onFail: () => modSanity(-1) },
+                { text: 'Brawl', type: 'check', stat: 'str', dc: 14, success: 'You beat them soundly!', fail: 'They beat you black and blue.', onSuccess: () => { takeDamage(1); modRep('infamy', 5); }, onFail: () => { takeDamage(5); modRep('infamy', 2); } }
+            ]);
+        } else if (isFriend) {
+            event = createEvent(`soc_friend_${person.id}`, `Friendship: ${person.name}`, `${person.name} invites you for a drink.`, [
+                { text: 'Drink Deep', type: 'check', stat: 'con', dc: 12, success: 'A great night! (+Friendship, -Stress)', fail: 'You vomit on their shoes.', onSuccess: () => { modRel(person.id, 5); if(state.occupation) state.occupation.stress=0; }, onFail: () => modRel(person.id, -5) },
+                { text: 'Talk Life', type: 'check', stat: 'wis', dc: 10, success: 'Deep conversation. (+Sanity)', fail: 'Awkward silence.', onSuccess: () => { modSanity(2); modRel(person.id, 5); }, onFail: () => {} },
+                { text: 'Decline', type: 'flavor', effect: () => log("You stay home.") }
+            ]);
+        } else {
+            // Acquaintance / Neutral
+            event = createEvent(`soc_neut_${person.id}`, `Meeting ${person.name}`, `You run into ${person.name}.`, [
+                { text: 'Chat', type: 'check', stat: 'cha', dc: 10, success: 'Pleasant conversation.', fail: 'You stutter.', onSuccess: () => modRel(person.id, 5), onFail: () => {} },
+                { text: 'Ask for News', type: 'check', stat: 'int', dc: 12, success: 'You learn of local events. (+1 INT)', fail: 'Just gossip.', onSuccess: () => { if(Math.random()>0.8) state.stats.int++; }, onFail: () => {} }
+            ]);
+        }
+        return event;
+    }
+
     function processYear() {
         state.age++;
         state.year++;
         state.interactions = {}; 
         state.activityLog = { love: 0, quest: 0, crime: 0, train: 0, lord: 0 }; 
-        state.flags.travelAllowed = false; // Reset permission
-        
+        state.flags.travelAllowed = false; 
+        state.eventQueue = []; // Clear queue
+
         const conMod = getModifier(state.stats.con);
-        // HP Increase: 1 + CON Mod (min 1)
         const hpGain = Math.max(1, 1 + conMod);
         state.maxHealth += hpGain;
         state.health = Math.min(state.maxHealth, state.health + hpGain);
 
-        // Sanity Fluctuation & Recovery
-        const spFlux = Math.floor(Math.random() * 3) - 1; // -1, 0, 1
+        const spFlux = Math.floor(Math.random() * 3) - 1; 
         state.sanity = Math.min(state.maxSanity, Math.max(0, state.sanity + spFlux));
 
-        // NPC SIMULATION (Decay, Travel, Events)
+        // NPC SIMULATION
         state.relationships.forEach(r => {
             if(r.health === "Deceased") return;
-
-            // Decay
             if (r.friendship > 0) r.friendship = Math.max(0, r.friendship - 5);
             if (r.romance > 0) r.romance = Math.max(0, r.romance - 10);
             
-            // Random Events
             if (Math.random() < 0.05) {
-                // Death Check (Old age)
                 if (r.age > 60 && Math.random() < 0.1) {
                     r.health = "Deceased";
                     log(`<span style="color:var(--failure)">† ${r.name} (${r.relation}) has passed away.</span>`);
                     modSanity(-1);
-                }
-                // Marriage
-                else if (r.age > 18 && !r.relation.includes('Spouse') && Math.random() < 0.1) {
+                } else if (r.age > 18 && !r.relation.includes('Spouse') && Math.random() < 0.1) {
                     log(`${r.name} (${r.relation}) has married.`);
-                }
-                // Childbirth
-                else if (r.age > 18 && r.age < 45 && r.gender === 'Female' && Math.random() < 0.1) {
+                } else if (r.age > 18 && r.age < 45 && r.gender === 'Female' && Math.random() < 0.1) {
                     log(`${r.name} (${r.relation}) gave birth to a child.`);
                     if(r.relation === 'Sister' || r.relation === 'Aunt') {
-                        // Create cousin/nephew
                         const gender = Math.random() > 0.5 ? 'Male' : 'Female';
                         const childRel = r.relation === 'Sister' ? 'Nephew/Niece' : 'Cousin';
                         addRelationship(getRandomName(gender), childRel, 50, gender, "Child", r.locationIndex, true, true);
                     }
-                }
-                // Travel
-                else if (Math.random() < 0.3) {
+                } else if (Math.random() < 0.3) {
                     r.locationIndex = Math.floor(Math.random() * CITIES.length);
                     if (r.friendship > 50) log(`${r.name} moved to ${CITIES[r.locationIndex].name}.`);
                 }
@@ -1594,9 +1726,7 @@
             r.age++;
         });
 
-        // House Treasury Simulation
         if (state.house && state.house.members.length > 0) {
-            // Chance for members to donate
             state.relationships.filter(r => r.isFamily && r.health !== "Deceased").forEach(mem => {
                  if (Math.random() < 0.15) {
                     const donation = Math.floor(Math.random() * 50) + 10;
@@ -1604,8 +1734,6 @@
                     log(`House: ${mem.name} donated ${donation}g to the treasury.`);
                  }
             });
-            
-            // Inheritance Logic
             checkInheritance();
         }
 
@@ -1621,57 +1749,52 @@
         processOccupation();
         checkUnlocks();
 
-        // Jeopardy Check
-        if (state.sanity / state.maxSanity < 0.15) {
-            log(`<strong class="text-purple-800">JEOPARDY:</strong> Your mind is fracturing...`);
-            renderEvent(POOLS.Jeopardy[Math.floor(Math.random() * POOLS.Jeopardy.length)]);
-            return;
-        }
+        // 1. SOCIAL EVENT (Guaranteed if people exist)
+        const socialEvt = generateSocialEvent();
+        if (socialEvt && state.age > 3) state.eventQueue.push(socialEvt);
 
+        // 2. AGE POOL EVENT (Guaranteed)
         let pool = POOLS.Infancy;
         if (state.age >= 3) pool = POOLS.Childhood;
         if (state.age >= 12) pool = POOLS.Teen;
         if (state.age >= 18) pool = POOLS.Adult;
         if (state.age >= 65) pool = POOLS.Elder;
-
-        const validEvents = pool.filter(e => true); 
-        const event = validEvents[Math.floor(Math.random() * validEvents.length)];
-        renderEvent(event);
-    }
-    
-    function checkInheritance() {
-        // Find current head
-        let head = state.relationships.find(r => (r.rank === "Lord" || r.rank === "Lady") && r.isFamily);
-        let headIsPlayer = state.class.includes("Lord") || state.class.includes("Lady");
         
-        // If head is undefined, and player isn't head, who is it?
-        // Maybe the father died?
-        if (!head && !headIsPlayer) {
-             // Logic to pass title to oldest child
-             // Candidates: Player + Siblings
-             let candidates = state.relationships.filter(r => (r.relation === "Sibling") && r.health !== "Deceased");
-             // Add player to candidates list for sorting
-             let playerObj = { id: 'PLAYER', name: state.name, age: state.age, isPlayer: true };
-             let allHeirs = [...candidates, playerObj].sort((a,b) => b.age - a.age);
-             
-             if (allHeirs.length > 0) {
-                 let newLord = allHeirs[0];
-                 if (newLord.isPlayer) {
-                     const rank = state.gender === 'Female' ? "Lady" : "Lord";
-                     state.class = `${rank} of House ${state.house.name}`;
-                     log(`<strong style="color:var(--gold)">INHERITANCE:</strong> You have inherited the title of ${rank}!`);
-                 } else {
-                     const rank = newLord.gender === 'Female' ? "Lady" : "Lord";
-                     newLord.rank = rank;
-                     log(`<strong style="color:var(--gold)">INHERITANCE:</strong> ${newLord.name} has inherited the title of ${rank}.`);
-                 }
-                 
-                 // Update Heir status for the next in line
-                 if (allHeirs.length > 1) {
-                     let nextHeir = allHeirs[1];
-                     if (!nextHeir.isPlayer) nextHeir.rank = "Heir";
-                 }
-             }
+        // Jeopardy Check overrides normal pool
+        if (state.sanity / state.maxSanity < 0.15) {
+            log(`<strong class="text-purple-800">JEOPARDY:</strong> Your mind is fracturing...`);
+            const jeoEvt = POOLS.Jeopardy[Math.floor(Math.random() * POOLS.Jeopardy.length)];
+            state.eventQueue.push(jeoEvt);
+        } else {
+            const validEvents = pool.filter(e => true); 
+            const ageEvt = validEvents[Math.floor(Math.random() * validEvents.length)];
+            state.eventQueue.push(ageEvt);
+        }
+
+        // 3. CANON EVENT (15% Chance)
+        if (state.age > 5 && Math.random() < 0.15) {
+            const canonEvt = POOLS.Canon[Math.floor(Math.random() * POOLS.Canon.length)];
+            state.eventQueue.push(canonEvt);
+        }
+
+        // START QUEUE
+        processNextEvent();
+    }
+
+    function processNextEvent() {
+        if (state.eventQueue.length > 0) {
+            const evt = state.eventQueue.shift();
+            renderEvent(evt);
+        } else {
+            // Queue empty, show advance button
+            const container = document.getElementById('choices-container');
+            container.innerHTML = '';
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn justify-center font-bold';
+            btn.innerText = "Advance Year";
+            btn.onclick = processYear;
+            container.appendChild(btn);
+            if (state.health <= 0) death();
         }
     }
 
@@ -1740,7 +1863,7 @@
 
     function actVisitLord() {
         if(!checkAge(10)) return;
-        AudioEngine.pulse();
+        // AudioEngine.pulse(); // Removed manual calls, handled globally
         state.activityLog.lord++;
         const city = CITIES[state.location];
         const rulerName = city.ruler;
@@ -1767,7 +1890,7 @@
 
     function actSocialize() {
         if(!checkAge(6)) return;
-        AudioEngine.pulse();
+        // AudioEngine.pulse();
         const roll = Math.random();
         if (roll < 0.4) {
             log("You wander the streets but meet no one of interest.");
@@ -1790,7 +1913,7 @@
 
     function actLove() {
         if(!checkAge(14)) return;
-        AudioEngine.pulse();
+        // AudioEngine.pulse();
         state.activityLog.love++;
         const roll = Math.random();
         if (roll < 0.5) {
@@ -1810,7 +1933,7 @@
 
     function actQuest() {
         if(!checkAge(16)) return;
-        AudioEngine.pulse();
+        // AudioEngine.pulse();
         state.activityLog.quest++;
         const pool = POOLS.Quest;
         renderEvent(pool[Math.floor(Math.random() * pool.length)]);
@@ -1819,7 +1942,7 @@
 
     function actCrime() {
         if(!checkAge(8)) return;
-        AudioEngine.pulse();
+        // AudioEngine.pulse();
         state.activityLog.crime++;
         const pool = POOLS.Crime;
         renderEvent(pool[Math.floor(Math.random() * pool.length)]);
@@ -1828,7 +1951,7 @@
 
     function actTrain() {
         if(!checkAge(6)) return;
-        AudioEngine.pulse();
+        // AudioEngine.pulse();
         state.activityLog.train++;
         const stat = ABILITIES[Math.floor(Math.random() * ABILITIES.length)];
         state.stats[stat]++;
@@ -1929,7 +2052,7 @@
     function closeNPC() { document.getElementById('npc-modal').classList.add('hidden'); }
     
     function openNPC(id) {
-        AudioEngine.pulse();
+        // AudioEngine.pulse();
         const r = state.relationships.find(x => x.id === id);
         if(!r) return;
         const loc = CITIES[r.locationIndex].name;
@@ -2111,7 +2234,7 @@
                 {
                     text: 'Leave',
                     type: 'flavor',
-                    effect: () => log("You decide not to pursue this path today.")
+                    effect: () => log("You decide to wait.")
                 }
             ]
         );
@@ -2160,7 +2283,7 @@
         const rel = state.relationships.find(r => r.id === id);
         if(!rel) return;
 
-        AudioEngine.pulse();
+        // AudioEngine.pulse();
         state.interactions[id] = count + 1;
         const align = rel.alignment || 'True Neutral';
         const isEvil = align.includes('Evil');
@@ -2286,7 +2409,7 @@
         if(state.gold >= amt) {
             state.gold -= amt;
             state.house.treasury += amt;
-            AudioEngine.pulse();
+            // AudioEngine.pulse();
             log(`You donated ${amt}g to House ${state.house.name}.`);
             updateUI();
         } else {
@@ -2299,7 +2422,7 @@
         if(state.house.treasury >= amt) {
             state.house.treasury -= amt;
             state.gold += amt;
-            AudioEngine.pulse();
+            // AudioEngine.pulse();
             log(`You withdrew ${amt}g from the treasury.`);
             updateUI();
         } else {
@@ -2313,16 +2436,16 @@
         
         // -- DATA PREP FOR TREE --
         // Level 1: Grandparents
-        const grandparents = state.relationships.filter(r => r.relation === 'Grandfather' || r.relation === 'Grandmother');
+        const grandparents = state.relationships.filter(r => (r.relation === 'Grandfather' || r.relation === 'Grandmother') && r.health !== "Deceased"); // Filtered deceased from tree for cleaner look, or keep them? Let's keep alive in tree, deceased in cemetery
         
         // Level 2: Parents + Uncles/Aunts
-        const parents = state.relationships.filter(r => r.relation === 'Father' || r.relation === 'Mother');
-        const unclesAunts = state.relationships.filter(r => r.relation.includes('Uncle') || r.relation.includes('Aunt'));
+        const parents = state.relationships.filter(r => (r.relation === 'Father' || r.relation === 'Mother') && r.health !== "Deceased");
+        const unclesAunts = state.relationships.filter(r => (r.relation.includes('Uncle') || r.relation.includes('Aunt')) && r.health !== "Deceased");
         const gen2 = [...parents, ...unclesAunts];
 
         // Level 3: Player + Siblings + Cousins
-        const siblings = state.relationships.filter(r => r.relation === 'Sibling');
-        const cousins = state.relationships.filter(r => r.relation === 'Cousin' || r.relation.includes('Nephew') || r.relation.includes('Niece'));
+        const siblings = state.relationships.filter(r => r.relation === 'Sibling' && r.health !== "Deceased");
+        const cousins = state.relationships.filter(r => (r.relation === 'Cousin' || r.relation.includes('Nephew') || r.relation.includes('Niece')) && r.health !== "Deceased");
         
         const renderNode = (p) => {
             const isDead = p.health === 'Deceased' ? 'dead' : '';
@@ -2452,6 +2575,103 @@
             </div>`).join('');
     }
 
+    // --- CEMETERY TAB ---
+    function renderCemeteryTab() {
+        const container = document.getElementById('cemetery-content');
+        const dead = state.relationships.filter(r => r.health === "Deceased");
+
+        if (dead.length === 0) {
+            container.innerHTML = `<p class="italic opacity-50 text-center mt-10">The earth is undisturbed. You have lost no one yet.</p>`;
+            return;
+        }
+
+        container.innerHTML = dead.map(r => {
+            const lootedClass = r.graveRobbed ? "opacity-50 grayscale" : "";
+            const lootedText = r.graveRobbed ? `<span class="text-red-800 font-bold block mt-2 text-xs">DESECRATED</span>` : "";
+            const hasInteracted = state.interactions[r.id];
+            
+            return `
+            <div class="grave-card ${lootedClass}">
+                <div class="grave-stone">
+                    <div class="text-2xl mb-2">†</div>
+                    <div class="font-bold text-xs uppercase">${r.name}</div>
+                    <div class="text-[10px] italic">${r.relation}</div>
+                    <div class="text-[10px] mt-1">Died Age ${r.age}</div>
+                </div>
+                ${lootedText}
+                <div class="flex justify-center gap-2 mt-4">
+                    <button onclick="payRespects('${r.id}')" class="choice-btn text-xs justify-center w-auto ${hasInteracted ? 'opacity-50 cursor-not-allowed' : ''}" ${hasInteracted ? 'disabled' : ''}>Pay Respects</button>
+                    <button onclick="searchGrave('${r.id}')" class="choice-btn text-xs justify-center w-auto bg-gray-800 text-gray-300 ${hasInteracted ? 'opacity-50 cursor-not-allowed' : ''}" ${hasInteracted ? 'disabled' : ''}>Search Grave</button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function payRespects(id) {
+        const r = state.relationships.find(x => x.id === id);
+        if(!r) return;
+        
+        if (state.interactions[id]) {
+            alert("You have already visited this grave this year.");
+            return;
+        }
+        state.interactions[id] = 1; // Mark visited for year
+
+        modRep('piety', 2);
+        modSanity(1);
+        log(`You knelt before the grave of ${r.name}. Your mind feels clearer. (+Piety, +SP)`);
+        updateUI();
+        switchTab('log'); // Redirect to chronicle
+    }
+
+    function searchGrave(id) {
+        const r = state.relationships.find(x => x.id === id);
+        if(!r) return;
+        
+        if (state.interactions[id]) {
+            alert("You have already visited this grave this year.");
+            return;
+        }
+        state.interactions[id] = 1; // Mark visited for year
+
+        if (r.graveRobbed) {
+            // Previously robbed, now empty
+            log(`You dig through the disturbed earth of ${r.name}'s grave, but find nothing but old bones.`);
+            modSanity(-1);
+            updateUI();
+            switchTab('log');
+            return;
+        }
+
+        if (!confirm("This is a heinous act. Are you sure?")) {
+            state.interactions[id] = 0; // Reset if cancelled
+            return;
+        }
+
+        r.graveRobbed = true;
+        modRep('infamy', 10);
+        modRep('piety', -10);
+        
+        // DC Check: INT (Investigation)
+        const check = rollD20(getModifier(state.stats.int));
+        const dc = 14;
+
+        if (check.total >= dc) {
+            const goldFound = Math.floor(Math.random() * 50) + 10;
+            state.gold += goldFound;
+            log(`<strong class="text-amber-600">GRAVE ROBBED:</strong> You dug up ${r.name}'s grave and found ${goldFound} gold! (+Infamy, -Piety)`);
+            if(Math.random() > 0.8) {
+                addItem('Bone Ring', 'Rare', 'Stolen from the dead.', 100);
+            }
+        } else {
+            log(`<strong class="text-red-800">CURSED:</strong> You found nothing but rot, and something followed you home. (+Infamy, -Piety)`);
+            addTrait('Haunted');
+            modSanity(-3);
+        }
+        updateUI();
+        switchTab('log');
+    }
+
     function addItem(name, rarity, desc, value) {
         state.inventory.push({ name, rarity, desc, value, id: Math.random().toString(36).substr(2, 9) });
         log(`<strong style="color:var(--gold)">ITEM GET:</strong> Found <span class="item-rarity-${rarity}">${name}</span>!`);
@@ -2502,7 +2722,7 @@
     }
 
     function resolveChoice(choice) {
-        AudioEngine.pulse();
+        // AudioEngine.pulse();
         if (choice.type === 'flavor') {
             if (choice.effect) choice.effect();
             nextTurn();
@@ -2523,14 +2743,8 @@
 
     function nextTurn() {
         updateUI();
-        const container = document.getElementById('choices-container');
-        container.innerHTML = '';
-        const btn = document.createElement('button');
-        btn.className = 'choice-btn justify-center font-bold';
-        btn.innerText = "Advance Year";
-        btn.onclick = processYear;
-        container.appendChild(btn);
-        if (state.health <= 0) death();
+        // Check Event Queue
+        processNextEvent();
     }
 
     function death() {
@@ -2575,6 +2789,7 @@
         renderInventory();
         renderMapTab();
         renderActivitiesTab();
+        renderCemeteryTab(); // Added
     }
 
     function addTrait(trait) {
@@ -2593,7 +2808,7 @@
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
         document.getElementById(`${tab}-tab`).classList.remove('hidden');
         document.getElementById(`tab-${tab}`).classList.add('active');
-        AudioEngine.pulse();
+        // AudioEngine.pulse();
     }
 
     init();
