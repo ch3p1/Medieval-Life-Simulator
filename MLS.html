@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A Medieval Life | Arcane Architect</title>
+    <title>A Medieval Life | D20 Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Spectral:ital,wght@0,400;0,700;1,400&display=swap');
@@ -13,10 +13,22 @@
             --ink: #2c1e16;
             --leather: #5d4037;
             --gold: #b8860b;
+            --success: #15803d;
+            --failure: #b91c1c;
+            --stress: #9f1239;
+            --royal: #4c1d95;
+            
+            /* Item Rarities */
+            --common: #737373;
+            --uncommon: #16a34a;
+            --rare: #2563eb;
+            --very-rare: #9333ea;
+            --legendary: #ea580c;
+            --artifact: #ca8a04;
         }
 
         body {
-            background-color: #1a1a1a;
+            background-color: #0f0f0f;
             color: var(--ink);
             font-family: 'Spectral', serif;
             display: flex;
@@ -24,6 +36,7 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
+            overflow: hidden;
         }
 
         .parchment-container {
@@ -31,10 +44,10 @@
             background-image: url("https://www.transparenttextures.com/patterns/p6-dark.png");
             border: 12px solid var(--leather);
             border-image: linear-gradient(to bottom, #8b4513, #5d4037) 1;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 0 100px rgba(0,0,0,0.1);
-            max-width: 800px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8), inset 0 0 120px rgba(0,0,0,0.2);
+            max-width: 1000px;
             width: 95%;
-            height: 90vh;
+            height: 95vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -47,411 +60,1046 @@
             padding: 1rem;
             text-align: center;
             background: rgba(0,0,0,0.03);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
+        .main-layout {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 240px;
+            border-right: 2px solid rgba(44, 30, 22, 0.1);
+            display: flex;
+            flex-direction: column;
+            background: rgba(0,0,0,0.02);
+            overflow-y: auto;
+        }
+
+        .tab-btn {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(44, 30, 22, 0.05);
+            font-family: 'MedievalSharp', cursive;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-btn:hover { background: rgba(0,0,0,0.05); }
+        .tab-btn.active { background: rgba(255,255,255,0.4); border-left: 5px solid var(--leather); font-weight: bold; }
+
+        .content-area {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* D&D Stat Block Styling */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
             padding: 1rem;
-            background: rgba(255, 255, 255, 0.3);
-            font-size: 0.9rem;
+            background: rgba(93, 64, 55, 0.05);
+            border-bottom: 1px solid rgba(44,30,22,0.1);
         }
 
         .stat-box {
             text-align: center;
-            border: 1px solid rgba(44, 30, 22, 0.1);
-            padding: 5px;
-            border-radius: 4px;
+            border: 2px solid var(--leather);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.4);
+            position: relative;
+            padding-bottom: 4px;
         }
 
-        .stat-val {
+        .stat-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
             font-weight: bold;
             display: block;
-            font-size: 1.2rem;
+            background: var(--leather);
+            color: #f4e4bc;
+            padding: 2px 0;
+            border-radius: 4px 4px 0 0;
         }
+
+        .stat-val { font-family: 'MedievalSharp'; font-size: 1.2rem; font-weight: bold; display: block; margin-top: 2px; }
+        .stat-mod { font-size: 0.75rem; color: #666; font-weight: bold; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); background: #f4e4bc; padding: 0 4px; border: 1px solid var(--leather); border-radius: 4px; }
 
         #event-log {
             flex-grow: 1;
             overflow-y: auto;
-            padding: 1.5rem;
+            padding: 1rem;
             display: flex;
             flex-direction: column;
             gap: 1rem;
-            mask-image: linear-gradient(to bottom, transparent, black 5%, black 95%, transparent);
+            scroll-behavior: smooth;
         }
 
         .event-entry {
-            border-left: 3px solid var(--leather);
-            padding-left: 1rem;
+            border-left: 4px solid var(--leather);
+            padding: 10px 16px;
             animation: fadeIn 0.5s ease-out;
-            background: rgba(255,255,255,0.2);
-            padding: 10px;
-            border-radius: 0 4px 4px 0;
+            background: rgba(255,255,255,0.3);
+            border-radius: 0 8px 8px 0;
+            position: relative;
         }
+
+        .event-entry.age-marker {
+            border-left: 4px solid var(--gold);
+            background: rgba(184, 134, 11, 0.1);
+            text-align: center;
+            font-family: 'MedievalSharp';
+            font-size: 1.1rem;
+        }
+
+        .dice-result {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            margin-top: 4px;
+        }
+        .dice-success { background: #dcfce7; color: var(--success); border: 1px solid var(--success); }
+        .dice-failure { background: #fee2e2; color: var(--failure); border: 1px solid var(--failure); }
+        .dice-crit { background: var(--gold); color: white; text-shadow: 0 1px 2px black; border: 1px solid #854d0e; }
 
         .choices-area {
             padding: 1.5rem;
             border-top: 2px solid rgba(44, 30, 22, 0.2);
-            background: rgba(0,0,0,0.02);
+            background: rgba(0,0,0,0.04);
             display: flex;
             flex-direction: column;
             gap: 10px;
-            align-items: center;
         }
 
-        button {
-            background: var(--leather);
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: 2px;
+        .choice-btn {
+            background: linear-gradient(to bottom, #5d4037, #3e2723);
+            color: #f4e4bc;
+            padding: 12px 16px;
+            border-radius: 6px;
             font-family: 'MedievalSharp', cursive;
-            transition: all 0.2s;
-            border: 1px solid #3e2723;
-            cursor: pointer;
+            text-align: left;
             width: 100%;
-            max-width: 400px;
-        }
-
-        button:hover:not(:disabled) {
-            background: #795548;
-            transform: translateY(-1px);
-        }
-
-        button:disabled {
-            background: #9e9e9e;
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-
-        .creation-screen {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--parchment);
-            z-index: 10;
-            display: flex;
-            flex-direction: column;
-            padding: 2rem;
-            text-align: center;
-        }
-
-        .point-allocator {
+            transition: all 0.2s;
+            border: 2px solid #2c1e16;
+            cursor: pointer;
+            font-size: 1rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            max-width: 300px;
-            margin: 10px auto;
-            width: 100%;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
         }
 
-        .dice-roll {
-            font-style: italic;
-            color: #7f1d1d;
-            font-weight: bold;
+        .choice-btn:hover:not(:disabled) { 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+            filter: brightness(1.1);
+        }
+        
+        .choice-btn:disabled { opacity: 0.6; cursor: not-allowed; filter: grayscale(1); }
+
+        .dc-badge {
+            background: rgba(0,0,0,0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            border: 1px solid rgba(255,255,255,0.2);
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        /* House System Styling */
+        .house-crest { font-size: 4rem; margin-bottom: 1rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .house-tier-royal { color: var(--royal); }
+        .house-rank-head { border-left: 3px solid var(--gold); padding-left: 8px; font-weight: bold; }
+        .house-rank-member { padding-left: 8px; opacity: 0.8; }
+        
+        /* Occupation Styling */
+        .bar-container { height: 8px; background: rgba(0,0,0,0.1); border-radius: 4px; overflow: hidden; margin-top: 4px; }
+        .bar-fill { height: 100%; transition: width 0.3s; }
+        .stress-fill { background: var(--stress); }
+        .perf-fill { background: var(--success); }
+        .affinity-fill { background: #db2777; }
+        
+        .job-card {
+            border: 2px solid var(--leather);
+            background: rgba(255,255,255,0.4);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .rel-card {
+            background: rgba(255,255,255,0.3);
+            border: 1px solid rgba(93, 64, 55, 0.2);
+            padding: 8px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
+        /* Inventory Styling */
+        .item-row { display: flex; align-items: center; justify-content: space-between; padding: 6px; border-bottom: 1px solid rgba(0,0,0,0.1); }
+        .item-rarity-Common { color: var(--common); font-weight: bold; }
+        .item-rarity-Uncommon { color: var(--uncommon); font-weight: bold; }
+        .item-rarity-Rare { color: var(--rare); font-weight: bold; text-shadow: 0 0 1px rgba(37,99,235,0.2); }
+        .item-rarity-VeryRare { color: var(--very-rare); font-weight: bold; text-shadow: 0 0 2px rgba(147,51,234,0.3); }
+        .item-rarity-Legendary { color: var(--legendary); font-weight: bold; text-shadow: 0 0 3px rgba(234,88,12,0.4); }
+        .item-rarity-Artifact { color: var(--artifact); font-weight: bold; text-shadow: 0 0 5px rgba(202,138,4,0.5); }
+
+        /* Utility */
+        .creation-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--parchment); z-index: 50;
+            display: flex; flex-direction: column; padding: 2rem;
+            text-align: center; overflow-y: auto;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--leather); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: var(--leather); border-radius: 4px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
 
 <div class="parchment-container">
-    <!-- Character Creation Screen -->
+    <!-- Character Creation Overlay -->
     <div id="creation-screen" class="creation-screen">
-        <h2 class="text-3xl font-medieval mb-4 font-bold" style="font-family: 'MedievalSharp';">Birth of a Legend</h2>
-        <p class="mb-6 italic">Distribute your 20 points among the six sacred attributes.</p>
-        <div id="allocators"></div>
-        <div class="mt-6">
-            <h3 class="text-xl font-bold">Points Remaining: <span id="points-left">20</span></h3>
-            <button id="start-btn" class="mt-4" disabled onclick="startGame()">Begin Your Chronicle</button>
+        <h2 class="text-5xl font-bold mb-2 text-amber-900" style="font-family: 'MedievalSharp';">A Medieval Life</h2>
+        <p class="italic mb-8 text-lg opacity-70">5th Edition Mechanics Edition</p>
+        
+        <div class="max-w-xl mx-auto w-full bg-white/40 p-6 rounded-lg border-2 border-[#5d4037] shadow-xl">
+            <h3 class="text-xl font-bold mb-4">Forge Your Destiny</h3>
+            <input type="text" id="char-name" placeholder="Enter First Name" class="w-full p-3 border-2 border-[#5d4037] bg-[#fdf6e3] text-center text-xl font-bold mb-6 focus:outline-none focus:border-amber-600 rounded">
+            
+            <div class="flex justify-center gap-4 mb-6">
+                <button id="gender-m" class="choice-btn w-32 justify-center" onclick="setGender('Male')">Male</button>
+                <button id="gender-f" class="choice-btn w-32 justify-center opacity-60" onclick="setGender('Female')">Female</button>
+            </div>
+
+            <div class="text-left mb-2 font-bold flex justify-between">
+                <span>Ability Scores</span>
+                <span class="text-xs font-normal italic">Standard Array (15, 14, 13, 12, 10, 8) assigned randomly</span>
+            </div>
+            
+            <div id="creation-stats" class="grid grid-cols-3 gap-2 mb-6">
+                <!-- Stats injected here -->
+            </div>
+
+            <button onclick="rerollStats()" class="text-xs underline text-amber-900 mb-6 cursor-pointer hover:text-amber-700">Reroll Dice</button>
+
+            <button id="start-btn" class="w-full bg-[#8b4513] text-white font-medieval text-2xl py-3 rounded border-2 border-[#2c1e16] hover:bg-[#a0522d] transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled onclick="startGame()">Begin Chronicle</button>
         </div>
     </div>
 
+    <!-- Header -->
     <div class="header">
-        <h1 class="text-3xl">A Medieval Chronicle</h1>
-        <p id="year-display" class="italic">The Year of our Lord, 1200</p>
+        <div class="text-left">
+            <h1 class="text-xl font-bold" id="display-name">Unknown Soul</h1>
+            <p class="text-xs opacity-70 font-bold text-amber-900" id="display-class">Commoner</p>
+        </div>
+        <div class="text-right">
+            <h2 class="text-2xl font-bold text-amber-900" id="year-display">Year 0</h2>
+            <p class="text-xs">Age: <span id="age-display">0</span></p>
+        </div>
     </div>
 
-    <div class="stats-grid">
-        <div class="stat-box"><span>STR</span><span id="stat-str" class="stat-val">10</span></div>
-        <div class="stat-box"><span>DEX</span><span id="stat-dex" class="stat-val">10</span></div>
-        <div class="stat-box"><span>CON</span><span id="stat-con" class="stat-val">10</span></div>
-        <div class="stat-box"><span>INT</span><span id="stat-int" class="stat-val">10</span></div>
-        <div class="stat-box"><span>WIS</span><span id="stat-wis" class="stat-val">10</span></div>
-        <div class="stat-box"><span>CHA</span><span id="stat-cha" class="stat-val">10</span></div>
-        <div class="stat-box"><span>Gold</span><span id="stat-gold" class="stat-val">0</span></div>
-        <div class="stat-box"><span>Status</span><span id="stat-status" class="stat-val">Peasant</span></div>
-        <div class="stat-box"><span>Age</span><span id="stat-age" class="stat-val">16</span></div>
-    </div>
+    <!-- Main Game Area -->
+    <div class="main-layout">
+        <div class="sidebar">
+            <div id="tab-log" class="tab-btn active" onclick="switchTab('log')">📜 Chronicle</div>
+            <div id="tab-char" class="tab-btn" onclick="switchTab('char')">👤 Character</div>
+            <div id="tab-house" class="tab-btn" onclick="switchTab('house')">🏰 House</div>
+            <div id="tab-rel" class="tab-btn" onclick="switchTab('rel')">❤️ Relationships</div>
+            <div id="tab-occ" class="tab-btn" onclick="switchTab('occ')">⚒️ Occupation</div>
+            <div id="tab-inv" class="tab-btn" onclick="switchTab('inv')">🎒 Inventory</div>
+            
+            <div class="mt-auto p-4 border-t border-black/10 text-xs">
+                <div class="font-bold mb-1">Unlocks</div>
+                <ul id="unlock-list" class="list-disc pl-4 space-y-1 opacity-70">
+                    <li class="line-through">Birth</li>
+                </ul>
+            </div>
+        </div>
 
-    <div id="event-log"></div>
+        <div class="content-area">
+            <!-- D&D Stat Block -->
+            <div class="stats-grid">
+                <div class="stat-box"><span class="stat-label">STR</span><span id="stat-str" class="stat-val">10</span><span id="mod-str" class="stat-mod">+0</span></div>
+                <div class="stat-box"><span class="stat-label">DEX</span><span id="stat-dex" class="stat-val">10</span><span id="mod-dex" class="stat-mod">+0</span></div>
+                <div class="stat-box"><span class="stat-label">CON</span><span id="stat-con" class="stat-val">10</span><span id="mod-con" class="stat-mod">+0</span></div>
+                <div class="stat-box"><span class="stat-label">INT</span><span id="stat-int" class="stat-val">10</span><span id="mod-int" class="stat-mod">+0</span></div>
+                <div class="stat-box"><span class="stat-label">WIS</span><span id="stat-wis" class="stat-val">10</span><span id="mod-wis" class="stat-mod">+0</span></div>
+                <div class="stat-box"><span class="stat-label">CHA</span><span id="stat-cha" class="stat-val">10</span><span id="mod-cha" class="stat-mod">+0</span></div>
+            </div>
 
-    <div id="choices-container" class="choices-area">
-        <!-- Buttons will be injected here -->
+            <!-- Tab: Log (Main Gameplay) -->
+            <div id="log-tab" class="tab-content flex-grow flex flex-col overflow-hidden">
+                <div id="event-log"></div>
+                <div id="input-area" class="mt-auto">
+                    <div id="decision-prompt" class="px-6 py-3 bg-amber-900/10 font-bold text-amber-900 border-t border-black/10 font-medieval text-lg">
+                        Fate awaits...
+                    </div>
+                    <div id="choices-container" class="choices-area">
+                        <!-- Buttons injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Character Sheet -->
+            <div id="char-tab" class="tab-content hidden p-6 overflow-y-auto">
+                <h2 class="text-3xl font-medieval mb-4 border-b border-black/20 pb-2">Character Sheet</h2>
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="font-bold mb-2">Vitals</h3>
+                        <p><strong>Health Status:</strong> <span id="health-status" class="text-green-700">Healthy</span></p>
+                        <p><strong>Gold:</strong> <span id="gold-display">0</span> GP</p>
+                        <p><strong>Social Reality:</strong> <span id="social-display">Peasant</span></p>
+                        <p><strong>Alignment:</strong> <span id="align-display">True Neutral</span></p>
+                        
+                        <h3 class="font-bold mt-4 mb-2 border-t border-black/10 pt-2">Reputation & Fame</h3>
+                        <div class="text-sm">
+                             <div class="flex justify-between"><span>👑 Renown:</span> <span id="rep-renown">0</span></div>
+                             <div class="flex justify-between"><span>⚔️ Honor:</span> <span id="rep-honor">0</span></div>
+                             <div class="flex justify-between"><span>🙏 Piety:</span> <span id="rep-piety">0</span></div>
+                             <div class="flex justify-between text-red-800"><span>☠️ Infamy:</span> <span id="rep-infamy">0</span></div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="font-bold mb-2">Traits & Feats</h3>
+                        <div id="traits-list" class="text-sm space-y-1 italic">None yet...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: House / Lineage -->
+            <div id="house-tab" class="tab-content hidden p-6 overflow-y-auto text-center">
+                <!-- Content injected via JS -->
+                <div id="house-content"></div>
+            </div>
+
+            <!-- Tab: Relationships -->
+            <div id="rel-tab" class="tab-content hidden p-6 overflow-y-auto">
+                <h2 class="text-3xl font-medieval mb-4 border-b border-black/20 pb-2">Relationships</h2>
+                <div id="rel-content"></div>
+            </div>
+
+            <!-- Tab: Occupation -->
+            <div id="occ-tab" class="tab-content hidden p-6 overflow-y-auto">
+                <h2 class="text-3xl font-medieval mb-4 border-b border-black/20 pb-2">Occupation & Trade</h2>
+                <div id="occ-content"></div>
+            </div>
+            
+             <!-- Tab: Inventory -->
+             <div id="inv-tab" class="tab-content hidden p-6 overflow-y-auto">
+                <h2 class="text-3xl font-medieval mb-4 border-b border-black/20 pb-2">Inventory</h2>
+                <div id="inventory-list" class="flex flex-col gap-1">
+                    <p class="italic opacity-50">Your satchel is empty.</p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 <script>
-    /**
-     * STATE MANAGEMENT
-     */
-    const gameState = {
+    /* --- ARCANE ARCHITECT'S ENGINE --- */
+
+    // 1. D&D 5e MECHANICS
+    const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+    
+    function getModifier(score) {
+        return Math.floor((score - 10) / 2);
+    }
+
+    function formatMod(mod) {
+        return mod >= 0 ? `+${mod}` : `${mod}`;
+    }
+
+    function rollD20(mod) {
+        const roll = Math.floor(Math.random() * 20) + 1;
+        return {
+            roll: roll,
+            mod: mod,
+            total: roll + mod,
+            isCrit: roll === 20,
+            isFail: roll === 1
+        };
+    }
+
+    // 2. STATE MANAGEMENT
+    const state = {
+        name: "Unknown",
+        gender: "Male",
+        age: 0,
         year: 1200,
-        age: 16,
-        isAlive: true,
-        points: 20,
-        stats: {
-            str: 8, dex: 8, con: 8,
-            int: 8, wis: 8, cha: 8
-        },
-        gold: 20,
-        status: 'Peasant',
-        log: []
-    };
-
-    const abilityNames = {
-        str: "Strength", dex: "Dexterity", con: "Constitution",
-        int: "Intelligence", wis: "Wisdom", cha: "Charisma"
-    };
-
-    /**
-     * D&D 5E DICE ENGINE
-     */
-    const Dice = {
-        roll: (sides = 20) => Math.floor(Math.random() * sides) + 1,
-        getModifier: (score) => Math.floor((score - 10) / 2),
-        abilityCheck: (abilityScore, dc) => {
-            const roll = Dice.roll(20);
-            const mod = Dice.getModifier(abilityScore);
-            const total = roll + mod;
-            return { success: total >= dc, roll, mod, total };
+        stats: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
+        reputation: { renown: 0, honor: 0, piety: 0, infamy: 0 },
+        gold: 0,
+        health: 100, 
+        socialClass: "Peasant", // 'Peasant' or 'House'
+        house: null, 
+        relationships: [],
+        occupation: null, 
+        jobHistory: {}, 
+        traits: [],
+        inventory: [],
+        flags: {
+            literate: false,
+            criminal: false,
+            married: false,
+            employed: false
         }
     };
 
-    /**
-     * EVENT ENGINE (CHOICE-BASED)
-     */
-    const eventPool = [
-        {
-            title: "The Local Festival",
-            description: "A traveling troupe has set up in the village square. How will you spend your day?",
-            choices: [
-                {
-                    text: "Enter the wrestling match (STR)",
-                    check: 'str', dc: 13,
-                    success: "You pinned the blacksmith's son! You win a purse of gold and renown.",
-                    fail: "You were tossed into the mud. Your muscles ache.",
-                    onSuccess: { gold: 10, stats: { str: 1 } },
-                    onFailure: { stats: { con: -1 } }
-                },
-                {
-                    text: "Perform a street song (CHA)",
-                    check: 'cha', dc: 12,
-                    success: "The crowd loves your voice! They shower you with copper coins.",
-                    fail: "They boo you off the stage. How embarrassing.",
-                    onSuccess: { gold: 15, stats: { cha: 1 } },
-                    onFailure: { stats: { cha: -1 } }
-                },
-                {
-                    text: "Study the traveler's maps (INT)",
-                    check: 'int', dc: 14,
-                    success: "You learn of distant lands and hidden routes.",
-                    fail: "The squiggles make no sense to you.",
-                    onSuccess: { stats: { int: 1, wis: 1 } },
-                    onFailure: { stats: { wis: -1 } }
-                }
+    // 3. DATA: OCCUPATIONS
+    const CAREERS = {
+        common: { 
+            name: "Common Labor", 
+            req: {},
+            ranks: [
+                { title: "Errand Runner", wage: 1, stressMod: 1 },
+                { title: "Farmhand", wage: 5, stressMod: 2 },
+                { title: "Foreman", wage: 12, stressMod: 3 }
             ]
         },
-        {
-            title: "A Shady Business",
-            description: "A hooded figure offers you a 'guaranteed' investment in a spice ship.",
-            choices: [
-                {
-                    text: "Trust your gut and refuse (WIS)",
-                    check: 'wis', dc: 11,
-                    success: "You realized it was a scam. You saved your hard-earned gold.",
-                    fail: "You let a good opportunity pass... or did you?",
-                    onSuccess: { stats: { wis: 1 } },
-                    onFailure: { stats: { wis: -1 } }
-                },
-                {
-                    text: "Invest 15 Gold (INT)",
-                    check: 'int', dc: 15,
-                    success: "The ship returns! You've tripled your investment.",
-                    fail: "The ship 'sank'. You lost your gold.",
-                    onSuccess: { gold: 30 },
-                    onFailure: { gold: -15 }
-                }
+        trade: { 
+            name: "Skilled Trade", 
+            req: { age: 10, stat: 'dex', val: 12 },
+            ranks: [
+                { title: "Apprentice", wage: 3, stressMod: 2 },
+                { title: "Journeyman", wage: 15, stressMod: 3 },
+                { title: "Master Artisan", wage: 40, stressMod: 5 }
             ]
         },
-        {
-            title: "The Guard's Recruitment",
-            description: "The local Baron is looking for new recruits for the border patrol.",
-            choices: [
-                {
-                    text: "Enlist in the infantry (CON)",
-                    check: 'con', dc: 13,
-                    success: "The training is hard but you thrive. You receive a soldier's pay.",
-                    fail: "The marching is too much for your legs. You are dismissed.",
-                    onSuccess: { gold: 20, stats: { str: 1, con: 1 } },
-                    onFailure: { stats: { con: -1 } }
-                },
-                {
-                    text: "Apply for the scouts (DEX)",
-                    check: 'dex', dc: 15,
-                    success: "You are silent as a shadow. The commander is impressed.",
-                    fail: "You tripped over a root during the test.",
-                    onSuccess: { gold: 25, stats: { dex: 1 } },
-                    onFailure: { stats: { dex: -1 } }
-                }
+        military: { 
+            name: "Military", 
+            req: { age: 14, stat: 'str', val: 11 },
+            ranks: [
+                { title: "Camp Follower", wage: 2, stressMod: 1 },
+                { title: "Foot Soldier", wage: 10, stressMod: 5 },
+                { title: "Veteran Sergeant", wage: 25, stressMod: 6 },
+                { title: "Captain", wage: 60, stressMod: 8 }
+            ]
+        },
+        scholar: {
+            name: "Scholarly",
+            req: { age: 12, stat: 'int', val: 13, flag: 'literate' },
+            ranks: [
+                { title: "Scribe's Assistant", wage: 4, stressMod: 1 },
+                { title: "Junior Scribe", wage: 12, stressMod: 2 },
+                { title: "Court Historian", wage: 45, stressMod: 4 }
+            ]
+        },
+        crime: {
+            name: "Criminal",
+            req: { age: 8, stat: 'dex', val: 10 },
+            ranks: [
+                { title: "Pickpocket", wage: 5, stressMod: 4 },
+                { title: "Burglar", wage: 20, stressMod: 6 },
+                { title: "Crime Boss", wage: 100, stressMod: 10 }
             ]
         }
-    ];
+    };
 
-    /**
-     * CHARACTER CREATION LOGIC
-     */
-    function initCreation() {
-        const container = document.getElementById('allocators');
-        for (let s in gameState.stats) {
-            const div = document.createElement('div');
-            div.className = 'point-allocator';
-            div.innerHTML = `
-                <span class="font-bold w-24 text-left">${abilityNames[s]}</span>
-                <button class="w-8 h-8 flex items-center justify-center bg-gray-400" onclick="changeStat('${s}', -1)">-</button>
-                <span id="alloc-${s}" class="text-xl font-bold w-12 text-center">8</span>
-                <button class="w-8 h-8 flex items-center justify-center bg-gray-400" onclick="changeStat('${s}', 1)">+</button>
-            `;
-            container.appendChild(div);
+    // 4. DATA: HOUSE SYSTEM (Refined)
+    const TIER_DATA = {
+        royal: { name: 'Royal House', sigils: ['🦁', '👑'], prob: 0.01 },
+        greater: { name: 'Greater House', sigils: ['🦅', '🐺', '🐉', '🦌', '🦑', '🌹', '☀️'], prob: 0.10 },
+        lesser: { name: 'Lesser House', sigils: ['🌲', '🐍', '🏰', '🐗', '🗡️', '🛡️', '🔔'], prob: 0.89 }
+    };
+    
+    // Internal Ranks for House Members
+    const HOUSE_RANKS = ["Lord/Lady", "Heir", "Younger Child", "House Member", "Sworn Sword", "Servant"];
+    
+    const HOUSE_NAMES = {
+        royal: ["Valoria", "Plantagenet", "Pendragon"],
+        greater: ["Stark", "Lannister", "Hightower", "Blackwood", "Arryn", "Tully", "Barotheon"],
+        lesser: ["Poole", "Cassel", "Payne", "Selmy", "Mormont", "Clegane", "Tarth"]
+    };
+
+    const NPC_NAMES = {
+        m: ["Eddard", "Tywin", "Robert", "Jaime", "Tyrion", "Jon", "Bran", "Rickon", "Robb", "Theon"],
+        f: ["Catelyn", "Cersei", "Sansa", "Arya", "Daenerys", "Margaery", "Olenna", "Brienne", "Yara", "Meera"]
+    };
+
+    // 5. EVENT POOLS
+    const createEvent = (id, title, text, choices) => ({ id, title, text, choices });
+    const POOLS = {
+        Infancy: [ 
+            createEvent('inf_omen', 'Astrological Omen', 'The village elder casts bones upon your crib.', [
+                { text: 'Smile at the Elder', type: 'flavor', effect: () => { state.stats.cha++; modRep('renown', 2); log(`The Elder smiles back. "A charmer," she says. (+1 CHA)`); } },
+                { text: 'Cry loudly', type: 'flavor', effect: () => { state.stats.con++; log(`"Strong lungs," the Elder grunts. (+1 CON)`); } }
+            ]),
+            createEvent('inf_lucky', 'Shiny Pebble', 'You find a perfectly round stone in the crib.', [
+                { text: 'Keep it', type: 'flavor', effect: () => { addItem('Lucky Stone', 'Common', 'A smooth river stone.'); log("It feels lucky."); } }
+            ]),
+            createEvent('inf_sick', 'The Fever', 'A sweating sickness grips the nursery.', [
+                { text: 'Fight the sickness', type: 'check', stat: 'con', dc: 10, success: 'You break the fever naturally. (+1 CON)', fail: 'The fever breaks, but leaves you frail. (-1 STR)', onSuccess: () => state.stats.con++, onFail: () => state.stats.str-- }
+            ])
+        ],
+        Childhood: [
+            createEvent('child_bully', 'The Bully', 'A larger child demands your lunch.', [
+                { text: 'Punch him', type: 'check', stat: 'str', dc: 12, success: 'You bloody his nose! (+Honor)', fail: 'He pummels you.', onSuccess: () => modRep('honor', 5), onFail: () => modRep('honor', -2) },
+                { text: 'Outsmart him', type: 'check', stat: 'int', dc: 13, success: 'You trick him.', fail: 'He hits you.', onSuccess: () => state.stats.int++, onFail: () => state.health -= 5 }
+            ]),
+            createEvent('child_find', 'Lost Heirloom', 'Digging in the mud, you hit metal.', [
+                { text: 'Clean it off', type: 'check', stat: 'int', dc: 10, success: 'It is a silver locket!', fail: 'Just rusty scrap.', onSuccess: () => addItem('Rusted Locket', 'Common', 'Once held a portrait.'), onFail: () => {} }
+            ])
+        ],
+        Teen: [
+             createEvent('teen_love', 'First Crush', 'You catch the eye of a peer.', [
+                { text: 'Woo with poetry', type: 'check', stat: 'cha', dc: 13, success: 'Romance blooms.', fail: 'You stutter.', onSuccess: () => state.stats.cha++, onFail: () => state.stats.cha-- },
+                { text: 'Impress with strength', type: 'check', stat: 'str', dc: 12, success: 'They admire you.', fail: 'You fail to lift the heavy sack.', onSuccess: () => state.stats.str++, onFail: () => {} }
+            ]),
+            createEvent('teen_loot', 'Old Battlefield', 'You scavenge an old skirmish site.', [
+                { text: 'Search bodies', type: 'check', stat: 'wis', dc: 14, success: 'You find a blade!', fail: 'Nothing but bones.', onSuccess: () => addItem('Soldier\'s Dagger', 'Uncommon', 'A serviceable steel blade.'), onFail: () => {} }
+            ])
+        ],
+        Adult: [
+            createEvent('adult_war', 'Call to Arms', 'Levies are raised.', [
+                { text: 'Go to War', type: 'check', stat: 'con', dc: 14, success: 'You survive a veteran. (+50 GP, +Honor)', fail: 'You return with a limp. (-1 DEX)', onSuccess: () => { state.gold += 50; addTrait('Veteran'); modRep('honor', 10); }, onFail: () => state.stats.dex-- }
+            ]),
+            createEvent('adult_magic', 'Arcane Discovery', 'You find a glowing rune.', [
+                { text: 'Touch it', type: 'check', stat: 'int', dc: 16, success: 'It fuses to your hand!', fail: 'It burns you.', onSuccess: () => addItem('Ring of Protection', 'Rare', 'Grants a magical shield.'), onFail: () => state.health -= 10 }
+            ])
+        ],
+        Elder: [
+             createEvent('elder_legacy', 'Family Vault', 'You decide to open the old vault.', [
+                { text: 'Open it', type: 'check', stat: 'wis', dc: 15, success: 'An ancient relic!', fail: 'Just dust.', onSuccess: () => addItem('Ancient Grimoire', 'VeryRare', 'Contains lost spells.'), onFail: () => {} }
+            ])
+        ]
+    };
+
+    // 6. LOGIC & ENGINE
+    function init() {
+        rerollStats();
+        document.querySelector('.header').style.opacity = 0;
+        document.querySelector('.main-layout').style.opacity = 0;
+        document.getElementById('char-name').addEventListener('input', checkReady);
+    }
+
+    function rerollStats() {
+        const standardArray = [15, 14, 13, 12, 10, 8];
+        for (let i = standardArray.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [standardArray[i], standardArray[j]] = [standardArray[j], standardArray[i]];
+        }
+        let i = 0;
+        for (let key in state.stats) state.stats[key] = standardArray[i++];
+        renderCreationStats();
+    }
+
+    function renderCreationStats() {
+        const container = document.getElementById('creation-stats');
+        container.innerHTML = '';
+        for (let key in state.stats) {
+            const val = state.stats[key];
+            container.innerHTML += `
+                <div class="bg-white/50 p-2 rounded text-center border border-[#5d4037]">
+                    <div class="text-xs uppercase font-bold">${key}</div>
+                    <div class="text-xl font-medieval">${val}</div>
+                    <div class="text-xs text-gray-600">${formatMod(getModifier(val))}</div>
+                </div>`;
         }
     }
 
-    window.changeStat = function(stat, amt) {
-        if (amt > 0 && gameState.points > 0 && gameState.stats[stat] < 18) {
-            gameState.stats[stat]++;
-            gameState.points--;
-        } else if (amt < 0 && gameState.stats[stat] > 8) {
-            gameState.stats[stat]--;
-            gameState.points++;
-        }
-        document.getElementById(`alloc-${stat}`).innerText = gameState.stats[stat];
-        document.getElementById('points-left').innerText = gameState.points;
-        document.getElementById('start-btn').disabled = gameState.points !== 0;
-    };
+    function setGender(g) {
+        state.gender = g;
+        document.getElementById('gender-m').style.opacity = g === 'Male' ? 1 : 0.6;
+        document.getElementById('gender-f').style.opacity = g === 'Female' ? 1 : 0.6;
+        document.getElementById('gender-m').style.border = g === 'Male' ? '2px solid gold' : '2px solid #2c1e16';
+        document.getElementById('gender-f').style.border = g === 'Female' ? '2px solid gold' : '2px solid #2c1e16';
+        checkReady();
+    }
 
-    /**
-     * UI & GAMEPLAY LOGIC
-     */
+    function checkReady() {
+        document.getElementById('start-btn').disabled = document.getElementById('char-name').value.length === 0;
+    }
+
+    function getRandomName(gender) {
+        const list = gender === 'Male' ? NPC_NAMES.m : NPC_NAMES.f;
+        return list[Math.floor(Math.random() * list.length)];
+    }
+
+    function generateHouse() {
+        const roll = Math.random();
+        
+        // 80% chance of being a Peasant, 20% House
+        if (roll < 0.8) {
+            state.socialClass = "Peasant";
+            state.house = null;
+            state.class = "Peasant";
+            // Generate Peasant Parents
+            addRelative("Father", "Male", "Peasant");
+            addRelative("Mother", "Female", "Peasant");
+            return;
+        }
+
+        // Noble Path
+        state.socialClass = "House";
+        
+        // Determine Tier
+        const tierRoll = Math.random();
+        let tierKey = 'lesser';
+        if (tierRoll > 0.99) tierKey = 'royal';
+        else if (tierRoll > 0.90) tierKey = 'greater';
+        
+        const tierData = TIER_DATA[tierKey];
+        const names = HOUSE_NAMES[tierKey];
+        const houseName = names[Math.floor(Math.random() * names.length)];
+        const sigil = tierData.sigils[Math.floor(Math.random() * tierData.sigils.length)];
+        
+        // Determine Player Rank
+        // Heir (5%), Younger Child (25%), House Member (70%)
+        const rankRoll = Math.random();
+        let rank = "House Member";
+        if (rankRoll > 0.95) rank = "Heir";
+        else if (rankRoll > 0.70) rank = "Younger Child";
+
+        state.house = {
+            tier: tierData.name,
+            name: houseName,
+            sigil: sigil,
+            members: []
+        };
+        
+        state.class = `${rank} of House ${houseName}`;
+
+        // Generate House Members
+        const lordName = getRandomName('Male');
+        const ladyName = getRandomName('Female');
+        
+        // Add Lord and Lady
+        addHouseMember(lordName, "Male", "Lord");
+        addHouseMember(ladyName, "Female", "Lady");
+
+        // Determine Parents based on Rank
+        if (rank === "Heir" || rank === "Younger Child") {
+            // Lord/Lady are parents
+            addRelationship(lordName, "Father", 100, "Male", "Lord");
+            addRelationship(ladyName, "Mother", 100, "Female", "Lady");
+        } else {
+            // Parents are other House Members
+            const fatherName = getRandomName('Male');
+            const motherName = getRandomName('Female');
+            addHouseMember(fatherName, "Male", "House Member");
+            addHouseMember(motherName, "Female", "House Member");
+            addRelationship(fatherName, "Father", 90, "Male", "House Member");
+            addRelationship(motherName, "Mother", 90, "Female", "House Member");
+        }
+
+        // Add player
+        addHouseMember(state.name, state.gender, rank);
+
+        // Add some randoms
+        addHouseMember(getRandomName('Male'), "Male", "Sworn Sword");
+        addHouseMember(getRandomName('Female'), "Female", "Servant");
+    }
+
+    function addHouseMember(name, gender, rank) {
+        state.house.members.push({
+            name, gender, rank, id: Math.random().toString(36).substr(2, 9)
+        });
+    }
+
+    function addRelative(relation, gender, rank) {
+        const name = getRandomName(gender);
+        addRelationship(name, relation, 80 + Math.floor(Math.random()*20), gender, rank);
+    }
+
+    function addRelationship(name, relation, affinity, gender, rank) {
+        state.relationships.push({
+            id: Math.random().toString(36).substr(2, 9),
+            name, relation, affinity, gender, rank
+        });
+    }
+
     function startGame() {
+        state.name = document.getElementById('char-name').value;
+        generateHouse();
         document.getElementById('creation-screen').style.display = 'none';
-        addLogEntry("Your Journey Begins", "You step out into the world with 20 gold and high hopes.");
-        showYearChoices();
+        document.querySelector('.header').style.opacity = 1;
+        document.querySelector('.main-layout').style.opacity = 1;
+        document.getElementById('display-name').innerText = state.name;
+        
+        log(`<strong>Year ${state.year}:</strong> ${state.name} is born into the world.`);
+        if (state.socialClass === 'House') {
+            log(`You are born a ${state.class}.`);
+        } else {
+            log(`You are born a free peasant.`);
+        }
+        
+        updateUI();
+        processYear();
+    }
+
+    function processYear() {
+        state.age++;
+        state.year++;
+        
+        document.getElementById('year-display').innerText = `Year ${state.year}`;
+        document.getElementById('age-display').innerText = state.age;
+
+        const logEl = document.getElementById('event-log');
+        const marker = document.createElement('div');
+        marker.className = 'event-entry age-marker';
+        marker.innerText = `Age ${state.age}`;
+        logEl.prepend(marker);
+
+        processOccupation();
+        checkUnlocks();
+
+        let pool = POOLS.Infancy;
+        if (state.age >= 3) pool = POOLS.Childhood;
+        if (state.age >= 12) pool = POOLS.Teen;
+        if (state.age >= 18) pool = POOLS.Adult;
+        if (state.age >= 65) pool = POOLS.Elder;
+
+        const validEvents = pool.filter(e => true); 
+        const event = validEvents[Math.floor(Math.random() * validEvents.length)];
+        renderEvent(event);
+    }
+
+    // --- OCCUPATION SYSTEM LOGIC ---
+    function processOccupation() {
+        if (!state.occupation) return;
+        const occ = state.occupation;
+        const career = CAREERS[occ.id];
+        const rankInfo = career.ranks[occ.rankIndex];
+        
+        let income = rankInfo.wage;
+        let stressGain = rankInfo.stressMod;
+        let perfGain = 5;
+
+        if (occ.workStance === 'slack') { income *= 0.7; stressGain -= 5; perfGain = -5; } 
+        else if (occ.workStance === 'intense') { income *= 1.5; stressGain += 5; perfGain = 15; }
+
+        state.gold += Math.floor(income);
+        occ.stress = Math.min(100, Math.max(0, occ.stress + stressGain));
+        occ.performance = Math.min(100, Math.max(0, occ.performance + perfGain));
+        occ.years++;
+
+        log(`<strong>Occupation:</strong> Earned ${Math.floor(income)} GP. Stress: ${occ.stress}%.`);
+        
+        if (occ.performance === 100 && occ.rankIndex < career.ranks.length - 1 && Math.random() > 0.7) {
+            occ.rankIndex++;
+            occ.performance = 50;
+            const newTitle = career.ranks[occ.rankIndex].title;
+            log(`<strong class="text-green-800">PROMOTION:</strong> Raised to ${newTitle}!`);
+            modRep('renown', 10);
+        }
+    }
+
+    function joinJob(id) {
+        if (state.jobHistory[id]) {
+            state.occupation = state.jobHistory[id];
+            state.occupation.performance = Math.max(0, state.occupation.performance - 20);
+            log(`<strong>Career:</strong> Resumed post as ${CAREERS[id].ranks[state.occupation.rankIndex].title}.`);
+            delete state.jobHistory[id];
+        } else {
+            state.occupation = { id, rankIndex: 0, performance: 50, stress: 0, workStance: 'normal', years: 0 };
+            log(`<strong>Career:</strong> Started as ${CAREERS[id].ranks[0].title}.`);
+        }
+        state.flags.employed = true;
         updateUI();
     }
 
-    function updateUI() {
-        for (let s in gameState.stats) {
-            document.getElementById(`stat-${s}`).innerText = gameState.stats[s];
+    function quitJob() {
+        if (state.occupation) {
+            log(`<strong>Career:</strong> Resigned.`);
+            state.jobHistory[state.occupation.id] = state.occupation;
+            state.occupation = null;
+            state.flags.employed = false;
+            updateUI();
         }
-        document.getElementById('stat-gold').innerText = gameState.gold;
-        document.getElementById('stat-age').innerText = gameState.age;
-        document.getElementById('stat-status').innerText = gameState.status;
-        document.getElementById('year-display').innerText = `The Year of our Lord, ${gameState.year}`;
-        
-        const log = document.getElementById('event-log');
-        log.scrollTop = log.scrollHeight;
+    }
+    
+    function setStance(s) {
+        if(state.occupation) state.occupation.workStance = s;
+        updateUI();
     }
 
-    function addLogEntry(title, text, rollData = null) {
-        const log = document.getElementById('event-log');
-        const entry = document.createElement('div');
-        entry.className = 'event-entry';
-        
-        let rollHtml = '';
-        if (rollData) {
-            const color = rollData.success ? 'text-green-700' : 'text-red-800';
-            rollHtml = `<br><span class="dice-roll ${color}">[Roll: ${rollData.roll} + Mod: ${rollData.mod} = ${rollData.total} vs DC ${rollData.dc}]</span>`;
+    // --- RELATIONSHIP SYSTEM ---
+    function interact(id, action) {
+        const rel = state.relationships.find(r => r.id === id);
+        if(!rel) return;
+
+        if (action === 'chat') {
+            rel.affinity = Math.min(100, rel.affinity + 5);
+            log(`You chatted with ${rel.name}.`);
+        } else if (action === 'gift') {
+            if (state.gold >= 5) {
+                state.gold -= 5;
+                rel.affinity = Math.min(100, rel.affinity + 10);
+                log(`You gave ${rel.name} a gift. (+Affinity)`);
+            } else {
+                log(`Not enough gold to buy a gift.`);
+            }
+        }
+        updateUI();
+    }
+
+    function renderRelTab() {
+        const container = document.getElementById('rel-content');
+        if (state.relationships.length === 0) {
+            container.innerHTML = `<p class="italic opacity-50">You are alone.</p>`;
+            return;
         }
 
-        entry.innerHTML = `
-            <h3 class="font-bold text-lg text-amber-900">${title}</h3>
-            <p>${text} ${rollHtml}</p>
+        container.innerHTML = state.relationships.map(r => `
+            <div class="rel-card">
+                <div>
+                    <div class="font-bold">${r.name}</div>
+                    <div class="text-xs opacity-70">${r.relation} • ${r.rank}</div>
+                </div>
+                <div class="flex flex-col items-end gap-1">
+                    <div class="text-xs font-bold">${r.affinity}%</div>
+                    <div class="w-24 h-2 bg-black/10 rounded overflow-hidden">
+                        <div class="h-full affinity-fill" style="width: ${r.affinity}%"></div>
+                    </div>
+                    <div class="flex gap-1 mt-1">
+                        <button onclick="interact('${r.id}', 'chat')" class="text-[10px] bg-white border border-[#5d4037] px-2 py-0.5 rounded hover:bg-amber-100">Chat</button>
+                        <button onclick="interact('${r.id}', 'gift')" class="text-[10px] bg-white border border-[#5d4037] px-2 py-0.5 rounded hover:bg-amber-100">Gift (5g)</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // --- HOUSE UI ---
+    function renderHouseTab() {
+        const container = document.getElementById('house-content');
+        if (state.socialClass === 'Peasant') {
+            container.innerHTML = `
+                <div class="house-crest opacity-50">🌾</div>
+                <h2 class="text-3xl font-medieval mb-2">Peasant Class</h2>
+                <p class="italic mb-4">You have no House affiliation.</p>
+                <div class="p-4 bg-white/30 border border-dashed border-[#5d4037] rounded text-sm text-left">
+                    <p><strong>Rights:</strong> Minimal. Subject to local lords.</p>
+                    <p><strong>Politics:</strong> None. You are invisible to the court.</p>
+                    <p class="mt-2 text-xs italic">Only by swearing a sword-oath or buying a title can you enter the House structure.</p>
+                </div>`;
+            return;
+        }
+
+        const h = state.house;
+        // Group members by rank
+        let membersHtml = '';
+        HOUSE_RANKS.forEach(rank => {
+            const group = h.members.filter(m => {
+                if(rank === "Lord/Lady") return m.rank === "Lord" || m.rank === "Lady";
+                return m.rank === rank;
+            });
+            
+            if (group.length > 0) {
+                membersHtml += `<div class="mb-2 text-left"><div class="text-xs uppercase font-bold text-amber-900 border-b border-black/10 mb-1">${rank}</div>`;
+                group.forEach(m => {
+                    const isMe = m.name === state.name ? " (You)" : "";
+                    const style = rank.includes("Lord") ? "house-rank-head" : "house-rank-member";
+                    membersHtml += `<div class="${style} text-sm">${m.name}${isMe}</div>`;
+                });
+                membersHtml += `</div>`;
+            }
+        });
+
+        const tierClass = h.tier === 'Royal House' ? 'house-tier-royal' : '';
+
+        container.innerHTML = `
+            <div class="house-crest ${tierClass}">${h.sigil}</div>
+            <h2 class="text-4xl font-medieval text-amber-900 mb-1">House ${h.name}</h2>
+            <div class="mb-6">
+                <span class="font-bold text-lg uppercase tracking-widest">${h.tier}</span>
+            </div>
+            
+            <div class="bg-white/40 p-4 rounded border border-[#5d4037] mb-4">
+                <h4 class="font-bold border-b border-black/10 mb-2 text-center">House Hierarchy</h4>
+                ${membersHtml}
+            </div>
         `;
-        log.appendChild(entry);
     }
 
-    function showYearChoices() {
-        const container = document.getElementById('choices-container');
-        container.innerHTML = `<p class="italic mb-2">The year ${gameState.year} unfolds...</p>`;
-        
-        const event = eventPool[Math.floor(Math.random() * eventPool.length)];
-        addLogEntry(event.title, event.description);
+    function renderOccupationTab() {
+        const container = document.getElementById('occ-content');
+        if (!state.occupation) {
+            let html = `<p class="italic mb-4">You currently have no vocation.</p><div class="space-y-2">`;
+            const historyIds = Object.keys(state.jobHistory);
+            if (historyIds.length > 0) {
+                html += `<h4 class="font-bold border-b border-black/10 mb-2">Resume Career</h4>`;
+                historyIds.forEach(hid => {
+                    const hist = state.jobHistory[hid];
+                    const c = CAREERS[hid];
+                    html += `<button onclick="joinJob('${hid}')" class="choice-btn text-sm mb-2 border-l-4 border-amber-600"><span>Resume: ${c.ranks[hist.rankIndex].title}</span></button>`;
+                });
+                html += `<h4 class="font-bold border-b border-black/10 mb-2 mt-4">New Career</h4>`;
+            }
+            for (let id in CAREERS) {
+                const c = CAREERS[id];
+                let canJoin = true;
+                if (c.req.age && state.age < c.req.age) canJoin = false;
+                if (c.req.stat && state.stats[c.req.stat] < c.req.val) canJoin = false;
+                if (c.req.flag && !state.flags[c.req.flag]) canJoin = false;
+                if (canJoin) html += `<button onclick="joinJob('${id}')" class="choice-btn text-sm"><span>${c.name}: ${c.ranks[0].title}</span><span class="opacity-70">${c.ranks[0].wage} GP/yr</span></button>`;
+            }
+            container.innerHTML = html;
+        } else {
+            const occ = state.occupation;
+            const jobData = CAREERS[occ.id].ranks[occ.rankIndex];
+            container.innerHTML = `
+                <div class="job-card">
+                    <h3 class="font-bold text-xl">${jobData.title}</h3>
+                    <p class="text-sm opacity-70">${CAREERS[occ.id].name} - Rank ${occ.rankIndex + 1}</p>
+                    <div class="mt-2 text-sm">Wage: ${jobData.wage} GP/yr</div>
+                    <div class="mt-4"><div class="text-xs flex justify-between"><span>Performance</span><span>${occ.performance}%</span></div><div class="bar-container"><div class="bar-fill perf-fill" style="width: ${occ.performance}%"></div></div></div>
+                    <div class="mt-2"><div class="text-xs flex justify-between"><span>Stress</span><span>${occ.stress}%</span></div><div class="bar-container"><div class="bar-fill stress-fill" style="width: ${occ.stress}%"></div></div></div>
+                </div>
+                <div class="flex gap-2 text-xs mb-4">
+                    <button onclick="setStance('slack')" class="p-2 border rounded ${occ.workStance==='slack'?'bg-amber-300':'bg-white'}">Slack</button>
+                    <button onclick="setStance('normal')" class="p-2 border rounded ${occ.workStance==='normal'?'bg-amber-500 text-white':'bg-white'}">Normal</button>
+                    <button onclick="setStance('intense')" class="p-2 border rounded ${occ.workStance==='intense'?'bg-red-800 text-white':'bg-white'}">Intense</button>
+                </div>
+                <button onclick="quitJob()" class="w-full border border-red-800 text-red-800 p-2 rounded hover:bg-red-100">Quit Job</button>
+            `;
+        }
+    }
 
+    function renderInventory() {
+        const list = document.getElementById('inventory-list');
+        if (state.inventory.length === 0) { list.innerHTML = `<p class="italic opacity-50">Your satchel is empty.</p>`; return; }
+        list.innerHTML = state.inventory.map(item => `<div class="item-row"><div><div class="item-rarity-${item.rarity}">${item.name}</div><div class="text-xs opacity-70">${item.desc}</div></div><div class="text-[10px] uppercase font-bold opacity-50 border border-black/20 px-1 rounded">${item.rarity}</div></div>`).join('');
+    }
+
+    function addItem(name, rarity, desc) {
+        state.inventory.push({ name, rarity, desc, id: Math.random().toString(36).substr(2, 9) });
+        log(`<strong style="color:var(--gold)">ITEM GET:</strong> Found <span class="item-rarity-${rarity}">${name}</span>!`);
+        updateUI();
+    }
+
+    function modRep(type, amt) { state.reputation[type] += amt; }
+    
+    function checkUnlocks() {
+        const ul = document.getElementById('unlock-list');
+        const addUnlock = (txt) => { const li = document.createElement('li'); li.innerText = `${txt} (Age ${state.age})`; li.style.color = "var(--ink)"; li.style.fontWeight = "bold"; ul.prepend(li); };
+        if (state.age === 4) addUnlock("Temple Blessings");
+        if (state.age === 6) { addUnlock("Basic Training"); state.flags.literate = true; }
+        if (state.age === 8) addUnlock("Petty Crime");
+        if (state.age === 14) addUnlock("Courtship & Enlistment");
+        if (state.age === 18) { addUnlock("Adulthood"); state.flags.adult = true; }
+    }
+
+    function renderEvent(event) {
+        log(`<strong>${event.title}:</strong> ${event.text}`);
+        const container = document.getElementById('choices-container');
+        container.innerHTML = '';
         event.choices.forEach(choice => {
+            if (choice.req && !choice.req(state)) return;
             const btn = document.createElement('button');
-            btn.innerText = choice.text;
-            btn.onclick = () => handleChoice(choice);
+            btn.className = 'choice-btn';
+            let badge = choice.type === 'check' ? `<span class="dc-badge" style="color: ${getModifier(state.stats[choice.stat]) >= 0 ? '#86efac' : '#fca5a5'}">${choice.stat.toUpperCase()} ${formatMod(getModifier(state.stats[choice.stat]))} (DC ${choice.dc})</span>` : choice.type === 'flavor' ? `<span class="opacity-50 text-xs">Free Action</span>` : '';
+            btn.innerHTML = `<span>${choice.text}</span> ${badge}`;
+            btn.onclick = () => { container.querySelectorAll('button').forEach(b => b.disabled = true); resolveChoice(choice); };
             container.appendChild(btn);
         });
     }
 
-    function handleChoice(choice) {
-        const result = Dice.abilityCheck(gameState.stats[choice.check], choice.dc);
-        const outcome = result.success ? choice.onSuccess : choice.onFailure;
-        const resultText = result.success ? choice.success : choice.fail;
-
-        // Apply outcomes
-        if (outcome.gold) gameState.gold = Math.max(0, gameState.gold + outcome.gold);
-        if (outcome.stats) {
-            for (let s in outcome.stats) {
-                gameState.stats[s] = Math.max(1, gameState.stats[s] + outcome.stats[s]);
-            }
-        }
-
-        addLogEntry("Outcome", resultText, { ...result, dc: choice.dc });
-        
-        // Progression Logic
-        gameState.year++;
-        gameState.age++;
-
-        // Status Promotion Check
-        if (gameState.status === 'Peasant' && gameState.gold >= 100) {
-            gameState.status = 'Merchant';
-            addLogEntry("Social Rise!", "With your wealth growing, the town recognizes you as a Merchant.");
-        } else if (gameState.status === 'Merchant' && gameState.gold >= 500) {
-            gameState.status = 'Noble';
-            addLogEntry("Nobility!", "You have purchased a title and land. You are now a member of the landed gentry.");
-        }
-
-        // Mortality Check
-        if (gameState.age > 65) {
-            const deathCheck = Dice.abilityCheck(gameState.stats.con, 5 + (gameState.age - 65));
-            if (!deathCheck.success) {
-                gameState.isAlive = false;
-                addLogEntry("Death Comes", "Your body finally tires. You pass away with a wealth of ${gameState.gold} gold.");
-                document.getElementById('choices-container').innerHTML = `<button onclick="location.reload()">Start A New Life</button>`;
+    function resolveChoice(choice) {
+        if (choice.type === 'flavor') {
+            if (choice.effect) choice.effect();
+            nextTurn();
+        } else if (choice.type === 'check') {
+            const result = rollD20(getModifier(state.stats[choice.stat]));
+            const passed = result.total >= choice.dc;
+            const resultClass = result.isCrit ? 'dice-crit' : (passed ? 'dice-success' : 'dice-failure');
+            const resultText = result.isCrit ? 'NAT 20!' : (result.isFail ? 'CRIT FAIL!' : (passed ? 'SUCCESS' : 'FAILURE'));
+            log(`<div class="mt-2 mb-2 p-2 bg-black/5 rounded text-sm"><span class="font-bold">Rolling ${choice.stat.toUpperCase()}:</span> d20(${result.roll}) ${formatMod(result.mod)} = <span class="text-lg font-bold">${result.total}</span> vs DC ${choice.dc}<br><span class="${resultClass} dice-result">${resultText}</span></div>`);
+            setTimeout(() => {
+                if (passed) { log(choice.success); if(choice.onSuccess) choice.onSuccess(); } 
+                else { log(choice.fail); if(choice.onFail) choice.onFail(); }
                 updateUI();
-                return;
-            }
+                nextTurn();
+            }, 600);
         }
-
-        updateUI();
-        
-        // Brief pause before next year's choices
-        const container = document.getElementById('choices-container');
-        container.innerHTML = `<button onclick="showYearChoices()">Advance to next Year</button>`;
     }
 
-    // Initialize
-    initCreation();
-</script>
+    function nextTurn() {
+        updateUI();
+        const container = document.getElementById('choices-container');
+        container.innerHTML = '';
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn justify-center font-bold';
+        btn.innerText = "Advance Year";
+        btn.onclick = processYear;
+        container.appendChild(btn);
+        if (state.health <= 0) death();
+    }
 
+    function death() {
+        const container = document.getElementById('choices-container');
+        container.innerHTML = '<div class="text-center text-red-800 font-bold text-xl p-4">YOUR WATCH HAS ENDED</div>';
+        log(`<strong style="color:red">DEATH:</strong> At the age of ${state.age}, ${state.name} passes.`);
+        document.getElementById('input-area').style.opacity = 0.5;
+        document.getElementById('input-area').style.pointerEvents = 'none';
+    }
+
+    function log(html) {
+        const logEl = document.getElementById('event-log');
+        const div = document.createElement('div');
+        div.className = 'event-entry';
+        div.innerHTML = html;
+        logEl.prepend(div);
+    }
+
+    function updateUI() {
+        for (let key in state.stats) {
+            const val = state.stats[key];
+            document.getElementById(`stat-${key}`).innerText = val;
+            document.getElementById(`mod-${key}`).innerText = formatMod(getModifier(val));
+        }
+        document.getElementById('gold-display').innerText = state.gold;
+        document.getElementById('social-display').innerText = state.socialClass;
+        document.getElementById('display-class').innerText = state.class;
+        
+        document.getElementById('rep-renown').innerText = state.reputation.renown;
+        document.getElementById('rep-honor').innerText = state.reputation.honor;
+        document.getElementById('rep-piety').innerText = state.reputation.piety;
+        document.getElementById('rep-infamy').innerText = state.reputation.infamy;
+
+        renderHouseTab();
+        renderRelTab();
+        renderOccupationTab();
+        renderInventory();
+    }
+
+    function addTrait(trait) {
+        if(state.traits.includes(trait)) return;
+        state.traits.push(trait);
+        const list = document.getElementById('traits-list');
+        if (state.traits.length === 1) list.innerHTML = '';
+        const div = document.createElement('div');
+        div.innerText = `• ${trait}`;
+        list.appendChild(div);
+        log(`<strong>New Trait:</strong> ${trait}`);
+    }
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(`${tab}-tab`).classList.remove('hidden');
+        document.getElementById(`tab-${tab}`).classList.add('active');
+    }
+
+    init();
+</script>
 </body>
 </html>
