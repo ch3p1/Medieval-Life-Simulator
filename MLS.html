@@ -68,7 +68,7 @@
         .stat-val {
             font-weight: bold;
             display: block;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
         }
 
         #event-log {
@@ -124,6 +124,16 @@
             opacity: 0.6;
         }
 
+        .creation-screen button.stat-btn {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
         .creation-screen {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -133,15 +143,40 @@
             flex-direction: column;
             padding: 2rem;
             text-align: center;
+            overflow-y: auto;
         }
 
         .point-allocator {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            max-width: 300px;
-            margin: 10px auto;
+            max-width: 320px;
+            margin: 5px auto;
             width: 100%;
+        }
+
+        .creation-input {
+            background: rgba(255,255,255,0.5);
+            border: 1px solid var(--leather);
+            padding: 8px;
+            font-family: 'Spectral', serif;
+            margin-bottom: 10px;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .gender-btn {
+            background: #d7ccc8;
+            color: var(--ink);
+            border: 1px solid var(--leather);
+            width: auto;
+            padding: 5px 15px;
+            font-size: 0.9rem;
+        }
+
+        .gender-btn.active {
+            background: var(--leather);
+            color: white;
         }
 
         .dice-roll {
@@ -165,17 +200,33 @@
 <div class="parchment-container">
     <!-- Character Creation Screen -->
     <div id="creation-screen" class="creation-screen">
-        <h2 class="text-3xl font-medieval mb-4 font-bold" style="font-family: 'MedievalSharp';">Birth of a Legend</h2>
-        <p class="mb-6 italic">Distribute your 20 points among the six sacred attributes.</p>
-        <div id="allocators"></div>
-        <div class="mt-6">
-            <h3 class="text-xl font-bold">Points Remaining: <span id="points-left">20</span></h3>
+        <h2 class="text-3xl font-medieval mb-2 font-bold" style="font-family: 'MedievalSharp';">Birth of a Legend</h2>
+        
+        <div class="mb-4">
+            <input type="text" id="char-name" placeholder="Enter First Name..." class="creation-input text-center">
+            <div class="flex justify-center gap-2 mt-2">
+                <button id="gender-m" class="gender-btn active" onclick="setGender('Male')">Male</button>
+                <button id="gender-f" class="gender-btn" onclick="setGender('Female')">Female</button>
+                <button id="gender-o" class="gender-btn" onclick="setGender('Other')">Other</button>
+            </div>
+        </div>
+
+        <div id="origin-box" class="mb-4 p-2 bg-white/30 border border-leather/20 rounded">
+            <p class="text-sm italic">Click to Roll for Lineage</p>
+            <button onclick="rollOrigin()" class="mt-1 bg-amber-800 text-sm h-8 py-0">Roll for Status</button>
+            <div id="origin-display" class="mt-2 font-bold text-lg hidden"></div>
+        </div>
+
+        <div id="allocators" class="mb-4"></div>
+        
+        <div class="mt-2">
+            <h3 class="text-lg font-bold">Points Remaining: <span id="points-left">20</span></h3>
             <button id="start-btn" class="mt-4" disabled onclick="startGame()">Begin Your Chronicle</button>
         </div>
     </div>
 
     <div class="header">
-        <h1 class="text-3xl">A Medieval Chronicle</h1>
+        <h1 class="text-3xl" id="display-full-name">A Medieval Chronicle</h1>
         <p id="year-display" class="italic">The Year of our Lord, 1200</p>
     </div>
 
@@ -200,9 +251,27 @@
 
 <script>
     /**
+     * NAME GEN & DATA
+     */
+    const Surnames = {
+        Peasant: ["Miller", "Smith", "Cooper", "Thatcher", "Baker", "Carter"],
+        Merchant: ["Sterling", "Goldbloom", "Mercator", "Vane", "Silkworth"],
+        Noble: ["de Clermont", "Lannister", "Plantagenet", "valois", "von Hapsburg"]
+    };
+
+    const FirstNames = {
+        Male: ["Alaric", "Cedric", "Godwin", "Osric", "Theobald", "Wulfric"],
+        Female: ["Adelaide", "Beatrix", "Elowen", "Gisela", "Isolde", "Rowena"],
+        Other: ["Skye", "Bryn", "Robin", "Puck", "Avery"]
+    };
+
+    /**
      * STATE MANAGEMENT
      */
     const gameState = {
+        firstName: "",
+        lastName: "",
+        gender: "Male",
         year: 1200,
         age: 16,
         isAlive: true,
@@ -212,7 +281,8 @@
             int: 8, wis: 8, cha: 8
         },
         gold: 20,
-        status: 'Peasant',
+        status: '',
+        family: [],
         log: []
     };
 
@@ -222,7 +292,7 @@
     };
 
     /**
-     * D&D 5E DICE ENGINE
+     * ENGINE
      */
     const Dice = {
         roll: (sides = 20) => Math.floor(Math.random() * sides) + 1,
@@ -236,7 +306,7 @@
     };
 
     /**
-     * EVENT ENGINE (CHOICE-BASED)
+     * EVENT POOL
      */
     const eventPool = [
         {
@@ -270,53 +340,31 @@
             ]
         },
         {
-            title: "A Shady Business",
-            description: "A hooded figure offers you a 'guaranteed' investment in a spice ship.",
+            title: "Family Matters",
+            description: "A message arrives from your kin. They ask for your assistance in a dispute.",
             choices: [
                 {
-                    text: "Trust your gut and refuse (WIS)",
-                    check: 'wis', dc: 11,
-                    success: "You realized it was a scam. You saved your hard-earned gold.",
-                    fail: "You let a good opportunity pass... or did you?",
-                    onSuccess: { stats: { wis: 1 } },
-                    onFailure: { stats: { wis: -1 } }
+                    text: "Settle it with reason (WIS)",
+                    check: 'wis', dc: 12,
+                    success: "Your wisdom brings peace to the household. Your family respects you more.",
+                    fail: "Your meddling only made the argument louder.",
+                    onSuccess: { stats: { wis: 1, cha: 1 } },
+                    onFailure: { stats: { cha: -1 } }
                 },
                 {
-                    text: "Invest 15 Gold (INT)",
-                    check: 'int', dc: 15,
-                    success: "The ship returns! You've tripled your investment.",
-                    fail: "The ship 'sank'. You lost your gold.",
-                    onSuccess: { gold: 30 },
-                    onFailure: { gold: -15 }
-                }
-            ]
-        },
-        {
-            title: "The Guard's Recruitment",
-            description: "The local Baron is looking for new recruits for the border patrol.",
-            choices: [
-                {
-                    text: "Enlist in the infantry (CON)",
-                    check: 'con', dc: 13,
-                    success: "The training is hard but you thrive. You receive a soldier's pay.",
-                    fail: "The marching is too much for your legs. You are dismissed.",
-                    onSuccess: { gold: 20, stats: { str: 1, con: 1 } },
-                    onFailure: { stats: { con: -1 } }
-                },
-                {
-                    text: "Apply for the scouts (DEX)",
-                    check: 'dex', dc: 15,
-                    success: "You are silent as a shadow. The commander is impressed.",
-                    fail: "You tripped over a root during the test.",
-                    onSuccess: { gold: 25, stats: { dex: 1 } },
-                    onFailure: { stats: { dex: -1 } }
+                    text: "Send gold to solve the problem (20 Gold)",
+                    check: 'gold', dc: 0, // Manual check
+                    success: "Gold solves all. Your family is happy, but your purse is light.",
+                    fail: "You don't have enough gold!",
+                    onSuccess: { gold: -20, stats: { cha: 2 } },
+                    onFailure: {} 
                 }
             ]
         }
     ];
 
     /**
-     * CHARACTER CREATION LOGIC
+     * CREATION FUNCTIONS
      */
     function initCreation() {
         const container = document.getElementById('allocators');
@@ -325,12 +373,70 @@
             div.className = 'point-allocator';
             div.innerHTML = `
                 <span class="font-bold w-24 text-left">${abilityNames[s]}</span>
-                <button class="w-8 h-8 flex items-center justify-center bg-gray-400" onclick="changeStat('${s}', -1)">-</button>
-                <span id="alloc-${s}" class="text-xl font-bold w-12 text-center">8</span>
-                <button class="w-8 h-8 flex items-center justify-center bg-gray-400" onclick="changeStat('${s}', 1)">+</button>
+                <div class="flex items-center gap-2">
+                    <button class="stat-btn bg-gray-400" onclick="changeStat('${s}', -1)">-</button>
+                    <span id="alloc-${s}" class="text-xl font-bold w-8 text-center">8</span>
+                    <button class="stat-btn bg-gray-400" onclick="changeStat('${s}', 1)">+</button>
+                </div>
             `;
             container.appendChild(div);
         }
+    }
+
+    window.setGender = function(g) {
+        gameState.gender = g;
+        document.querySelectorAll('.gender-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`gender-${g === 'Male' ? 'm' : g === 'Female' ? 'f' : 'o'}`).classList.add('active');
+        
+        // Auto-fill name if empty
+        const nameInput = document.getElementById('char-name');
+        if (!nameInput.value) {
+            const list = FirstNames[g];
+            nameInput.value = list[Math.floor(Math.random() * list.length)];
+        }
+    };
+
+    window.rollOrigin = function() {
+        const roll = Dice.roll(100);
+        let status = 'Peasant';
+        let rarity = 'Common';
+        
+        if (roll > 95) { status = 'Noble'; rarity = 'Legendary'; }
+        else if (roll > 75) { status = 'Merchant'; rarity = 'Rare'; }
+        
+        gameState.status = status;
+        const surnames = Surnames[status];
+        gameState.lastName = surnames[Math.floor(Math.random() * surnames.length)];
+        gameState.gold = status === 'Noble' ? 100 : status === 'Merchant' ? 50 : 10;
+
+        const display = document.getElementById('origin-display');
+        display.classList.remove('hidden');
+        display.innerHTML = `<span class="text-xs uppercase tracking-widest block">${rarity} Origin</span> ${status} ${gameState.lastName}`;
+        checkStartReady();
+    };
+
+    function generateFamily() {
+        const statuses = ['Alive', 'Deceased', 'Ailing'];
+        gameState.family = [
+            { relation: 'Father', name: FirstNames.Male[Math.floor(Math.random() * 5)], status: statuses[Math.floor(Math.random() * 3)] },
+            { relation: 'Mother', name: FirstNames.Female[Math.floor(Math.random() * 5)], status: statuses[Math.floor(Math.random() * 3)] }
+        ];
+        
+        const siblingCount = Math.floor(Math.random() * 4);
+        for(let i=0; i<siblingCount; i++) {
+            const gender = Math.random() > 0.5 ? 'Male' : 'Female';
+            gameState.family.push({
+                relation: 'Sibling',
+                name: FirstNames[gender][Math.floor(Math.random() * 5)],
+                status: 'Alive'
+            });
+        }
+    }
+
+    function checkStartReady() {
+        const name = document.getElementById('char-name').value;
+        const startBtn = document.getElementById('start-btn');
+        startBtn.disabled = !(name && gameState.status && gameState.points === 0);
     }
 
     window.changeStat = function(stat, amt) {
@@ -343,15 +449,24 @@
         }
         document.getElementById(`alloc-${stat}`).innerText = gameState.stats[stat];
         document.getElementById('points-left').innerText = gameState.points;
-        document.getElementById('start-btn').disabled = gameState.points !== 0;
+        checkStartReady();
     };
 
     /**
-     * UI & GAMEPLAY LOGIC
+     * GAMEPLAY
      */
     function startGame() {
+        gameState.firstName = document.getElementById('char-name').value;
+        generateFamily();
+        
         document.getElementById('creation-screen').style.display = 'none';
-        addLogEntry("Your Journey Begins", "You step out into the world with 20 gold and high hopes.");
+        document.getElementById('display-full-name').innerText = `${gameState.firstName} ${gameState.lastName}`;
+        
+        addLogEntry("Chronicle Begins", `Born to a ${gameState.status} family, you embark on your life.`);
+        
+        let familyDesc = gameState.family.map(f => `${f.relation} ${f.name} (${f.status})`).join(", ");
+        addLogEntry("Your Kin", `You are surrounded by family: ${familyDesc}.`);
+        
         showYearChoices();
         updateUI();
     }
@@ -389,7 +504,7 @@
 
     function showYearChoices() {
         const container = document.getElementById('choices-container');
-        container.innerHTML = `<p class="italic mb-2">The year ${gameState.year} unfolds...</p>`;
+        container.innerHTML = `<p class="italic mb-2">Age ${gameState.age} - Choices must be made...</p>`;
         
         const event = eventPool[Math.floor(Math.random() * eventPool.length)];
         addLogEntry(event.title, event.description);
@@ -403,11 +518,21 @@
     }
 
     function handleChoice(choice) {
-        const result = Dice.abilityCheck(gameState.stats[choice.check], choice.dc);
+        let result = { success: true };
+        
+        if (choice.text.includes("Gold")) {
+            if (gameState.gold < 20) {
+                addLogEntry("Outcome", "You do not have enough gold to do this!");
+                return;
+            }
+            result.success = true;
+        } else {
+            result = Dice.abilityCheck(gameState.stats[choice.check], choice.dc);
+        }
+
         const outcome = result.success ? choice.onSuccess : choice.onFailure;
         const resultText = result.success ? choice.success : choice.fail;
 
-        // Apply outcomes
         if (outcome.gold) gameState.gold = Math.max(0, gameState.gold + outcome.gold);
         if (outcome.stats) {
             for (let s in outcome.stats) {
@@ -415,41 +540,28 @@
             }
         }
 
-        addLogEntry("Outcome", resultText, { ...result, dc: choice.dc });
+        addLogEntry("Outcome", resultText, choice.check ? { ...result, dc: choice.dc } : null);
         
-        // Progression Logic
         gameState.year++;
         gameState.age++;
 
-        // Status Promotion Check
-        if (gameState.status === 'Peasant' && gameState.gold >= 100) {
-            gameState.status = 'Merchant';
-            addLogEntry("Social Rise!", "With your wealth growing, the town recognizes you as a Merchant.");
-        } else if (gameState.status === 'Merchant' && gameState.gold >= 500) {
-            gameState.status = 'Noble';
-            addLogEntry("Nobility!", "You have purchased a title and land. You are now a member of the landed gentry.");
-        }
-
-        // Mortality Check
-        if (gameState.age > 65) {
-            const deathCheck = Dice.abilityCheck(gameState.stats.con, 5 + (gameState.age - 65));
-            if (!deathCheck.success) {
+        // Survival
+        if (gameState.age > 60) {
+            const check = Dice.abilityCheck(gameState.stats.con, 5 + (gameState.age - 60));
+            if (!check.success) {
                 gameState.isAlive = false;
-                addLogEntry("Death Comes", "Your body finally tires. You pass away with a wealth of ${gameState.gold} gold.");
-                document.getElementById('choices-container').innerHTML = `<button onclick="location.reload()">Start A New Life</button>`;
+                addLogEntry("Rest in Peace", `You passed away at ${gameState.age}. Final Wealth: ${gameState.gold}`);
+                document.getElementById('choices-container').innerHTML = `<button onclick="location.reload()">Reincarnate</button>`;
                 updateUI();
                 return;
             }
         }
 
         updateUI();
-        
-        // Brief pause before next year's choices
         const container = document.getElementById('choices-container');
-        container.innerHTML = `<button onclick="showYearChoices()">Advance to next Year</button>`;
+        container.innerHTML = `<button onclick="showYearChoices()">Begin Next Year</button>`;
     }
 
-    // Initialize
     initCreation();
 </script>
 
