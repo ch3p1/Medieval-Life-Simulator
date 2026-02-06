@@ -16,7 +16,7 @@
             --success: #15803d;
             --failure: #b91c1c;
             --stress: #9f1239;
-            --sanity: #6b21a8; /* Purple for Sanity */
+            --sanity: #6b21a8;
             --royal: #4c1d95;
             
             /* Item Rarities */
@@ -238,9 +238,43 @@
         /* House System Styling */
         .house-crest { font-size: 4rem; margin-bottom: 1rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
         .house-tier-royal { color: var(--royal); }
-        .house-rank-head { border-left: 3px solid var(--gold); padding-left: 8px; font-weight: bold; }
-        .house-rank-member { padding-left: 8px; opacity: 0.8; }
         
+        .holding-card {
+            background: rgba(255,255,255,0.5); border: 2px solid var(--leather); border-radius: 8px;
+            padding: 1rem; text-align: left; margin-bottom: 1.5rem; position: relative;
+        }
+        .holding-icon { position: absolute; right: 10px; top: 5px; font-size: 2rem; opacity: 0.3; }
+        
+        .roster-group { margin-bottom: 1.5rem; }
+        .roster-header { 
+            font-family: 'MedievalSharp'; border-bottom: 2px solid rgba(93, 64, 55, 0.3); 
+            margin-bottom: 0.5rem; text-align: left; font-size: 1.1rem; color: var(--leather); font-weight: bold;
+        }
+        .roster-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(255,255,255,0.3); border-bottom: 1px solid rgba(0,0,0,0.05);
+            padding: 8px; transition: background 0.2s; cursor: pointer;
+        }
+        .roster-item:hover { background: rgba(255,255,255,0.6); }
+        .roster-role { font-size: 0.8rem; opacity: 0.8; font-style: italic; }
+
+        /* Lineage Tree Styling */
+        .lineage-tree { display: flex; flex-direction: column; align-items: center; gap: 2rem; padding: 1rem; margin-top: 2rem; border-top: 4px double var(--leather); padding-top: 2rem; }
+        .gen-row { display: flex; gap: 2rem; justify-content: center; position: relative; }
+        .tree-node { 
+            display: flex; flex-direction: column; align-items: center; 
+            border: 2px solid var(--leather); background: rgba(255,255,255,0.5); 
+            padding: 8px; border-radius: 8px; min-width: 120px;
+            position: relative; z-index: 2;
+        }
+        .tree-node.active-pc { border-color: var(--gold); background: #fef3c7; box-shadow: 0 0 10px rgba(184, 134, 11, 0.3); }
+        .tree-node strong { font-family: 'MedievalSharp'; font-size: 1.1rem; }
+        .tree-node em { font-size: 0.8rem; opacity: 0.8; }
+        
+        .gen-row::after {
+            content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 2px; background: rgba(93, 64, 55, 0.3); z-index: 1; display: none;
+        }
+
         /* Occupation Styling */
         .bar-container { height: 8px; background: rgba(0,0,0,0.1); border-radius: 4px; overflow: hidden; margin-top: 4px; }
         .bar-fill { height: 100%; transition: width 0.3s; }
@@ -643,33 +677,97 @@
             employed: false,
             startOrigin: 'Peasant',
             travelAllowed: false,
-            travelTarget: null
+            travelTarget: null,
+            adult: false
         }
     };
 
-    // 3. DATA: OCCUPATIONS
+    // 3. DATA: OCCUPATIONS & GUILDS
     const CAREERS = {
         common: { 
-            name: "Common Labor", 
+            name: "Laborer", 
             req: { age: 8 },
+            dc: 8, stat: 'con',
             ranks: [
                 { title: "Errand Runner", wage: 1, stressMod: 1 },
                 { title: "Farmhand", wage: 5, stressMod: 2 },
                 { title: "Foreman", wage: 12, stressMod: 3 }
             ]
         },
-        trade: { 
-            name: "Skilled Trade", 
-            req: { age: 12, stat: 'dex', val: 11 },
+        farmer: {
+            name: "Farmer",
+            req: { age: 10 },
+            dc: 10, stat: 'con',
             ranks: [
-                { title: "Apprentice", wage: 3, stressMod: 2 },
-                { title: "Journeyman", wage: 15, stressMod: 3 },
-                { title: "Master Artisan", wage: 40, stressMod: 5 }
+                { title: "Field Hand", wage: 3, stressMod: 2 },
+                { title: "Homesteader", wage: 10, stressMod: 3 },
+                { title: "Land Owner", wage: 25, stressMod: 4 }
+            ]
+        },
+        blacksmith: {
+            name: "Blacksmith",
+            req: { age: 12, stat: 'str', val: 12 },
+            dc: 13, stat: 'str',
+            ranks: [
+                { title: "Bellows Boy/Girl", wage: 5, stressMod: 3 },
+                { title: "Apprentice Smith", wage: 15, stressMod: 4 },
+                { title: "Master Smith", wage: 45, stressMod: 5 }
+            ]
+        },
+        carpenter: {
+            name: "Carpenter",
+            req: { age: 12, stat: 'dex', val: 11 },
+            dc: 12, stat: 'dex',
+            ranks: [
+                { title: "Woodcutter", wage: 4, stressMod: 3 },
+                { title: "Joiner", wage: 14, stressMod: 4 },
+                { title: "Master Builder", wage: 40, stressMod: 5 }
+            ]
+        },
+        stonemason: {
+            name: "Stonemason",
+            req: { age: 12, stat: 'con', val: 12 },
+            dc: 13, stat: 'str',
+            ranks: [
+                { title: "Quarryman", wage: 5, stressMod: 4 },
+                { title: "Stonecutter", wage: 16, stressMod: 4 },
+                { title: "Architect", wage: 50, stressMod: 6 }
+            ]
+        },
+        baker: {
+            name: "Baker",
+            req: { age: 12, stat: 'wis', val: 10 },
+            dc: 11, stat: 'wis',
+            ranks: [
+                { title: "Dough Kneader", wage: 3, stressMod: 2 },
+                { title: "Oven Keeper", wage: 12, stressMod: 3 },
+                { title: "Master Patissier", wage: 35, stressMod: 4 }
+            ]
+        },
+        weaver: {
+            name: "Weaver",
+            req: { age: 12, stat: 'dex', val: 12 },
+            dc: 12, stat: 'dex',
+            ranks: [
+                { title: "Wool Carder", wage: 3, stressMod: 1 },
+                { title: "Loom Operator", wage: 12, stressMod: 2 },
+                { title: "Master Weaver", wage: 30, stressMod: 3 }
+            ]
+        },
+        tanner: {
+            name: "Tanner",
+            req: { age: 12, stat: 'con', val: 11 },
+            dc: 12, stat: 'con',
+            ranks: [
+                { title: "Hide Scraper", wage: 4, stressMod: 4 },
+                { title: "Leatherworker", wage: 14, stressMod: 4 },
+                { title: "Master Tanner", wage: 35, stressMod: 5 }
             ]
         },
         merchant: {
             name: "Merchant",
             req: { age: 16, stat: 'cha', val: 12 },
+            dc: 14, stat: 'cha',
             ranks: [
                 { title: "Peddler", wage: 10, stressMod: 3 },
                 { title: "Shopkeeper", wage: 30, stressMod: 4 },
@@ -678,7 +776,8 @@
         },
         squire: {
             name: "Squireship",
-            req: { age: 12, stat: 'str', val: 12 }, // Usually special entry
+            req: { age: 12, stat: 'str', val: 12 }, // Special entry via NPC interaction
+            dc: 100, stat: 'str', // Impossible via menu
             ranks: [
                 { title: "Page", wage: 2, stressMod: 2 },
                 { title: "Squire", wage: 5, stressMod: 4 },
@@ -688,6 +787,7 @@
         military: { 
             name: "Military", 
             req: { age: 14, stat: 'con', val: 10 },
+            dc: 12, stat: 'con',
             ranks: [
                 { title: "Camp Follower", wage: 2, stressMod: 1 },
                 { title: "Foot Soldier", wage: 10, stressMod: 5 },
@@ -698,6 +798,7 @@
         scholar: {
             name: "Scholarly",
             req: { age: 12, stat: 'int', val: 12, flag: 'literate' },
+            dc: 14, stat: 'int',
             ranks: [
                 { title: "Scribe's Assistant", wage: 4, stressMod: 1 },
                 { title: "Junior Scribe", wage: 12, stressMod: 2 },
@@ -707,6 +808,7 @@
         clergy: {
             name: "Clergy",
             req: { age: 12, stat: 'wis', val: 11 },
+            dc: 13, stat: 'wis',
             ranks: [
                 { title: "Novice", wage: 0, stressMod: 1 },
                 { title: "Priest", wage: 5, stressMod: 3 },
@@ -716,24 +818,17 @@
         bard: {
             name: "Bard",
             req: { age: 12, stat: 'cha', val: 12 },
+            dc: 13, stat: 'cha',
             ranks: [
                 { title: "Street Busker", wage: 2, stressMod: 1 },
                 { title: "Tavern Singer", wage: 8, stressMod: 2 },
                 { title: "Royal Minstrel", wage: 50, stressMod: 4 }
             ]
         },
-        courtier: {
-            name: "Courtier",
-            req: { age: 16, stat: 'cha', val: 13, class: 'House' },
-            ranks: [
-                { title: "Cupbearer", wage: 5, stressMod: 2 },
-                { title: "Court Gossip", wage: 20, stressMod: 5 },
-                { title: "Royal Advisor", wage: 80, stressMod: 8 }
-            ]
-        },
         crime: {
             name: "Criminal",
             req: { age: 8, stat: 'dex', val: 10 },
+            dc: 10, stat: 'dex',
             ranks: [
                 { title: "Pickpocket", wage: 5, stressMod: 4 },
                 { title: "Burglar", wage: 20, stressMod: 6 },
@@ -752,14 +847,14 @@
     const HOUSE_RANKS = ["Lord/Lady", "Heir", "Younger Child", "House Member", "Sworn Sword", "Servant"];
     
     const GREATER_HOUSES_INFO = {
-        "Chep": { motto: "Unity in Starlight", desc: "The Royal line, descended from Hero Ren.", heirloom: "Lumina, the Star-Blade", sigil: "🦁👑" },
-        "Valdoria": { motto: "Gold is Power", desc: "Masters of coin and trade in the golden west.", heirloom: "The Gilded Scepter", sigil: "🦅" },
-        "Thalor": { motto: "Tides Bow to None", desc: "Wardens of the stormy seas and the leviathans beneath.", heirloom: "The Abyssal Trident", sigil: "🦑" },
-        "Grimward": { motto: "Winter is our Anvil", desc: "Sentinels of the frozen north against the darkness.", heirloom: "Frostfang (Greataxe)", sigil: "🐺" },
-        "Sunstrider": { motto: "Light Pierces All", desc: "Keepers of the deep forests and ancient magic.", heirloom: "The Verdant Bow", sigil: "🌹" },
-        "Ironheart": { motto: "Steel Endures", desc: "Forgers of steel and stone in the industrial heart.", heirloom: "The Black Hammer", sigil: "🐉" },
-        "Moonshadow": { motto: "Secrets in Silence", desc: "Scholars of the arcane arts built upon ruins.", heirloom: "The Crystal Orb", sigil: "🌙" },
-        "Stormbreaker": { motto: "Above the Clouds", desc: "Watchers of the high peaks, touching the clouds.", heirloom: "Sky-Splitter (Spear)", sigil: "⚡" }
+        "Chep": { motto: "Unity in Starlight", desc: "The Royal line, descended from Hero Ren.", heirloom: "Lumina, the Star-Blade", sigil: "🦁👑", holding: "The Sun Fortress", holdingDesc: "The radiant seat of the High King, built from white marble that glows at dawn." },
+        "Valdoria": { motto: "Gold is Power", desc: "Masters of coin and trade in the golden west.", heirloom: "The Gilded Scepter", sigil: "🦅", holding: "The Golden Vaults", holdingDesc: "A massive palace carved into the cliffside, guarding the realm's treasury." },
+        "Thalor": { motto: "Tides Bow to None", desc: "Wardens of the stormy seas and the leviathans beneath.", heirloom: "The Abyssal Trident", sigil: "🦑", holding: "Stormwatch Keep", holdingDesc: "A formidable fortress lashed by eternal waves, protecting the southern coasts." },
+        "Grimward": { motto: "Winter is our Anvil", desc: "Sentinels of the frozen north against the darkness.", heirloom: "Frostfang (Greataxe)", sigil: "🐺", holding: "Ice-Fang Citadel", holdingDesc: "Built from black basalt and magical ice, it has never been breached." },
+        "Sunstrider": { motto: "Light Pierces All", desc: "Keepers of the deep forests and ancient magic.", heirloom: "The Verdant Bow", sigil: "🌹", holding: "The Elder Tree", holdingDesc: "A palace woven from living wood inside a tree the size of a mountain." },
+        "Ironheart": { motto: "Steel Endures", desc: "Forgers of steel and stone in the industrial heart.", heirloom: "The Black Hammer", sigil: "🐉", holding: "The Black Forge", holdingDesc: "An industrial complex of smoke and fire where the finest steel is born." },
+        "Moonshadow": { motto: "Secrets in Silence", desc: "Scholars of the arcane arts built upon ruins.", heirloom: "The Crystal Orb", sigil: "🌙", holding: "Spire of Whispers", holdingDesc: "A floating tower tethered by chains, housing the greatest library in the world." },
+        "Stormbreaker": { motto: "Above the Clouds", desc: "Watchers of the high peaks, touching the clouds.", heirloom: "Sky-Splitter (Spear)", sigil: "⚡", holding: "Cloudreach", holdingDesc: "A castle perched on the highest peak, accessible only by wyvern or narrow bridge." }
     };
 
     const HOUSE_NAMES = {
@@ -768,6 +863,8 @@
         lesser: ["Oakenshield", "Swiftwater", "Gloomveil", "Brightsteel", "Duskwood", "Cragstone", "Mistwalker", 
                  "Windrider", "Frostborne", "Emberfall", "Ironfoot", "Ravenhill", "Shadowmere", "Lightbringer"]
     };
+    
+    const HOLDING_PREFIXES = ["The Keep of", "Fortress of", "Manor of", "Hall of"];
     
     const CITIES = [
         { name: "Chep (Capital)", ruler: "House Chep", desc: "The royal seat of power, founded by Hero Ren.", x: 50, y: 50 },
@@ -816,10 +913,6 @@
                 { text: 'Outsmart him', type: 'check', stat: 'int', dc: 13, success: 'You trick him.', fail: 'He hits you.', onSuccess: () => state.stats.int++, onFail: () => takeDamage(5) },
                 { text: 'Give Lunch', type: 'flavor', effect: () => { modRep('honor', -1); log("You go hungry."); } }
             ]),
-            createEvent('child_class_play', 'Playtime', 'Who do you play with?', [
-                { text: 'Noble Kids', type: 'check', stat: 'cha', dc: 12, success: 'You make connections. (+Renown)', fail: 'They mock your clothes.', onSuccess: () => modRep('renown', 5), onFail: () => {} },
-                { text: 'Street Urchins', type: 'flavor', effect: () => { state.stats.dex++; log("You learn to run fast. (+1 DEX)"); } }
-            ]),
             createEvent('child_magic_well', 'The Whispering Well', 'A voice calls from the depths.', [
                 { text: 'Listen', type: 'check', stat: 'wis', dc: 14, success: 'You hear a secret of the arcane. (+1 INT)', fail: 'It gives you nightmares. (Fearful)', onSuccess: () => state.stats.int++, onFail: () => addTrait('Fearful') }
             ]),
@@ -839,10 +932,6 @@
             createEvent('teen_duel', 'The Challenge', 'A rival challenges your honor.', [
                 { text: 'Duel to first blood', type: 'check', stat: 'dex', dc: 13, success: 'You cut their cheek. (+Honor)', fail: 'They slice your eye. (One-Eyed)', onSuccess: () => modRep('honor', 10), onFail: () => { takeDamage(10); addTrait('One-Eyed'); } },
                 { text: 'Refuse', type: 'flavor', effect: () => { modRep('honor', -5); log("Cowardice lingers."); } }
-            ]),
-            createEvent('teen_ball', 'The Grand Ball', 'Invitations are sent out.', [
-                { text: 'Attend', type: 'check', stat: 'cha', dc: 14, req: (s) => s.socialClass === 'House', success: 'You are the talk of the night. (+Renown)', fail: 'You spill wine on a Duke.', onSuccess: () => modRep('renown', 10), onFail: () => modRep('infamy', 5) },
-                { text: 'Sneak In', type: 'check', stat: 'dex', dc: 16, req: (s) => s.socialClass === 'Peasant', success: 'You dance in disguise.', fail: 'Guards throw you out.', onSuccess: () => modRep('renown', 5), onFail: () => takeDamage(5) }
             ]),
             createEvent('teen_forest', 'The Strange Stag', 'A white stag crosses your path.', [
                 { text: 'Shoot it', type: 'check', stat: 'dex', dc: 15, success: 'A prize kill. (+50g)', fail: 'It vanishes in mist.', onSuccess: () => { state.gold += 50; addItem('Stag Antler', 'Uncommon', 'Pristine white antler.', 20); }, onFail: () => {} },
@@ -958,7 +1047,8 @@
                 { text: 'Combat Tournament', type: 'check', stat: 'str', dc: 18, success: 'You defeat the champion! You are ennobled.', fail: 'You are defeated and humiliated.', onSuccess: () => ennoblePlayer(), onFail: () => { takeDamage(10); modRep('infamy', 5); } },
                 { text: 'Silver Tongue', type: 'check', stat: 'cha', dc: 22, success: 'Your words weave a spell. You are ennobled.', fail: 'The court laughs at your presumption.', onSuccess: () => ennoblePlayer(), onFail: () => modRep('infamy', 5) }
             ])
-        ]
+        ],
+        JobInterview: [] // Populated dynamically
     };
 
     // 6. LOGIC & ENGINE
@@ -1067,12 +1157,17 @@
         let houseDetails = {};
         if (tierKey !== 'lesser' && GREATER_HOUSES_INFO[houseName]) {
             houseDetails = GREATER_HOUSES_INFO[houseName];
+            houseDetails.holding = GREATER_HOUSES_INFO[houseName].holding;
+            houseDetails.holdingDesc = GREATER_HOUSES_INFO[houseName].holdingDesc;
         } else {
+            const prefix = HOLDING_PREFIXES[Math.floor(Math.random() * HOLDING_PREFIXES.length)];
             houseDetails = {
                 motto: "Honor Above All",
                 desc: "A lesser noble house striving for glory.",
                 heirloom: "Old Shield",
-                sigil: tierData.sigils[Math.floor(Math.random() * tierData.sigils.length)]
+                sigil: tierData.sigils[Math.floor(Math.random() * tierData.sigils.length)],
+                holding: `${prefix} ${houseName}`,
+                holdingDesc: "A sturdy manor house overseeing the surrounding lands."
             };
         }
         
@@ -1088,6 +1183,8 @@
             motto: houseDetails.motto,
             desc: houseDetails.desc,
             heirloom: houseDetails.heirloom,
+            holding: houseDetails.holding,
+            holdingDesc: houseDetails.holdingDesc,
             members: []
         };
         
@@ -1104,43 +1201,53 @@
             if(cityIdx !== -1) rulerCityIndex = cityIdx;
         }
 
-        addHouseMember(lordName, "Male", "Lord", rulerCityIndex);
-        addHouseMember(ladyName, "Female", "Lady", rulerCityIndex);
-
-        // Parents logic
+        // Logic fix: Ensure House Members and Relationships share ID if they are the same person
+        // Logic: Add relationships first, then add to house with same ID
+        
         if (rank === "Heir" || rank === "Younger Child") {
-            // Parents are the Lord/Lady
-            // Ensure I am born where they are
+            // Parents are Lord/Lady
             state.location = rulerCityIndex; 
-            addRelationship(lordName, "Father", 100, "Male", "Lord", rulerCityIndex);
-            addRelationship(ladyName, "Mother", 100, "Female", "Lady", rulerCityIndex);
+            const father = addRelationship(lordName, "Father", 100, "Male", "Lord", rulerCityIndex);
+            const mother = addRelationship(ladyName, "Mother", 100, "Female", "Lady", rulerCityIndex);
+            
+            addHouseMember(father.name, father.gender, father.rank, father.locationIndex, father.id);
+            addHouseMember(mother.name, mother.gender, mother.rank, mother.locationIndex, mother.id);
         } else {
+            // Lord/Lady exist but aren't parents
+            addHouseMember(lordName, "Male", "Lord", rulerCityIndex);
+            addHouseMember(ladyName, "Female", "Lady", rulerCityIndex);
+
             // Random parents within house
-            // Ensure I am born where they are
             const father = tryAddParent("Father", "Male", "House Member", locIndex);
-            if(father) addHouseMember(father.name, "Male", "House Member", locIndex);
+            if(father) addHouseMember(father.name, father.gender, father.rank, father.locationIndex, father.id);
             
             const mother = tryAddParent("Mother", "Female", "House Member", locIndex);
-            if(mother) addHouseMember(mother.name, "Female", "House Member", locIndex);
+            if(mother) addHouseMember(mother.name, mother.gender, mother.rank, mother.locationIndex, mother.id);
         }
 
-        // Add player
-        addHouseMember(state.name, state.gender, rank, state.location); 
+        // Add player (no ID needed in members list as they are main state)
+        addHouseMember(state.name, state.gender, rank, state.location, "PLAYER"); 
         
-        // Random members
-        addHouseMember(getRandomName('Male'), "Male", "Sworn Sword", Math.floor(Math.random() * CITIES.length));
-        addHouseMember(getRandomName('Female'), "Female", "Servant", Math.floor(Math.random() * CITIES.length));
+        // Random sibling?
+        if (Math.random() > 0.5) {
+            const sibGender = Math.random() > 0.5 ? 'Male' : 'Female';
+            const sib = addRelationship(getRandomName(sibGender), "Sibling", 80, sibGender, "House Member", state.location);
+            addHouseMember(sib.name, sib.gender, sib.rank, sib.locationIndex, sib.id);
+        }
     }
 
     function createLesserHouseForPlayer() {
         const tierData = TIER_DATA['lesser'];
         const names = HOUSE_NAMES['lesser'];
         const houseName = names[Math.floor(Math.random() * names.length)];
+        const prefix = HOLDING_PREFIXES[Math.floor(Math.random() * HOLDING_PREFIXES.length)];
         const houseDetails = {
              motto: "Bought with Blood",
              desc: "A newly risen house.",
              heirloom: "Gilded Sword",
-             sigil: tierData.sigils[Math.floor(Math.random() * tierData.sigils.length)]
+             sigil: tierData.sigils[Math.floor(Math.random() * tierData.sigils.length)],
+             holding: `${prefix} ${houseName}`,
+             holdingDesc: "A modest fortification recently acquired."
         };
 
         state.house = {
@@ -1150,14 +1257,20 @@
             motto: houseDetails.motto,
             desc: houseDetails.desc,
             heirloom: houseDetails.heirloom,
+            holding: houseDetails.holding,
+            holdingDesc: houseDetails.holdingDesc,
             members: []
         };
         
         const rank = state.gender === 'Female' ? "Lady" : "Lord";
         state.class = `${rank} of House ${houseName}`;
         
-        addHouseMember(state.name, state.gender, rank, state.location);
-        addHouseMember(getRandomName('Male'), "Male", "Sworn Sword", state.location);
+        addHouseMember(state.name, state.gender, rank, state.location, "PLAYER");
+        
+        // Add existing family to house if possible?
+        // Simplification: Add a new sworn sword
+        const sw = addRelationship(getRandomName('Male'), "Sworn Sword", 100, "Male", "Knight", state.location);
+        addHouseMember(sw.name, sw.gender, "Sworn Sword", sw.locationIndex, sw.id);
     }
     
     function ennoblePlayer() {
@@ -1168,9 +1281,9 @@
         updateUI();
     }
 
-    function addHouseMember(name, gender, rank, locIndex) {
+    function addHouseMember(name, gender, rank, locIndex, id) {
         state.house.members.push({
-            name, gender, rank, locationIndex: locIndex, id: Math.random().toString(36).substr(2, 9)
+            name, gender, rank, locationIndex: locIndex, id: id || Math.random().toString(36).substr(2, 9)
         });
     }
 
@@ -1572,7 +1685,7 @@
                 <button onclick="interact('${id}', 'gift')" class="choice-btn text-sm">Gift (5g)</button>
             `;
             if (isKnight && state.age >= 12 && state.occupation?.id !== 'squire') {
-                actions += `<button onclick="askToSquire('${id}')" class="choice-btn text-sm mt-2 bg-amber-800">Ask to Squire</button>`;
+                actions += `<button onclick="attemptJob('squire')" class="choice-btn text-sm mt-2 bg-amber-800">Ask to Squire</button>`;
             }
         } else {
             actions = `<button onclick="interact('${id}', 'letter')" class="choice-btn text-sm">Send Letter (1g)</button>`;
@@ -1623,20 +1736,6 @@
         if (val < 60) return "Friend";
         if (val < 90) return "Good Friend";
         return "Best Friend";
-    }
-
-    function askToSquire(id) {
-        const r = state.relationships.find(x => x.id === id);
-        closeNPC();
-        // Check check
-        const roll = rollD20(getModifier(state.stats.str));
-        if (roll.total >= 12 && r.friendship >= 30) {
-            log(`<strong class="text-green-800">Success!</strong> ${r.name} accepts you as a squire.`);
-            joinJob('squire'); // Using the new squire career
-        } else {
-            log(`<strong class="text-red-800">Refused.</strong> ${r.name} says you are not ready.`);
-        }
-        updateUI();
     }
 
     // --- OCCUPATION SYSTEM LOGIC ---
@@ -1692,7 +1791,7 @@
                 if (c.req.flag && !state.flags[c.req.flag]) canJoin = false;
                 if (c.req.class && state.socialClass !== c.req.class) canJoin = false;
                 
-                if (canJoin) html += `<button onclick="joinJob('${id}')" class="choice-btn text-sm"><span>${c.name}: ${c.ranks[0].title}</span><span class="opacity-70">${c.ranks[0].wage} GP/yr</span></button>`;
+                if (canJoin) html += `<button onclick="attemptJob('${id}')" class="choice-btn text-sm"><span>${c.name}: ${c.ranks[0].title}</span><span class="opacity-70">${c.ranks[0].wage} GP/yr</span></button>`;
             }
             container.innerHTML = html;
         } else {
@@ -1714,6 +1813,51 @@
                 <button onclick="quitJob()" class="w-full border border-red-800 text-red-800 p-2 rounded hover:bg-red-100">Quit Job</button>
             `;
         }
+    }
+
+    function attemptJob(id) {
+        if(id === 'squire') closeNPC(); // If called from NPC modal
+        
+        const career = CAREERS[id];
+        log(`You attempt to find work as a ${career.name}.`);
+        
+        // Create dynamic event
+        const interviewEvent = createEvent(
+            'job_interview', 
+            `The ${career.name} Guild`, 
+            `You approach the master of the guild asking for work. They look you over critically.`,
+            [
+                { 
+                    text: 'Demonstrate Skill', 
+                    type: 'check', 
+                    stat: career.stat, 
+                    dc: career.dc, 
+                    success: 'The Master nods approvingly. "You have the touch. We will take you on."', 
+                    fail: 'The Master shakes their head. "Your hands are clumsy. Come back when you are better trained."', 
+                    onSuccess: () => joinJob(id), 
+                    onFail: () => {} 
+                },
+                {
+                    text: 'Bribe (50g)',
+                    type: 'check',
+                    stat: 'cha',
+                    dc: 10,
+                    req: (s) => s.gold >= 50,
+                    success: 'They take the coin with a wink. "Welcome aboard."',
+                    fail: 'They take the coin but throw you out anyway. "We have standards."',
+                    onSuccess: () => { state.gold -= 50; joinJob(id); },
+                    onFail: () => { state.gold -= 50; }
+                },
+                {
+                    text: 'Leave',
+                    type: 'flavor',
+                    effect: () => log("You decide not to pursue this path today.")
+                }
+            ]
+        );
+        
+        renderEvent(interviewEvent);
+        switchTab('log');
     }
 
     function joinJob(id) {
@@ -1863,72 +2007,152 @@
         }).join('');
     }
 
-    // --- HOUSE UI ---
+    // --- HOUSE & LINEAGE UI ---
     function renderHouseTab() {
         const container = document.getElementById('house-content');
+        
         if (state.socialClass === 'Peasant') {
+             // Build Peasant Family Tree
+            const father = getParent('Father');
+            const mother = getParent('Mother');
+            
+            let parentsHtml = '';
+            if (father) parentsHtml += `<div class="tree-node" onclick="openNPC('${father.id}')"><strong>${father.name}</strong><em>Father</em></div>`;
+            else parentsHtml += `<div class="tree-node opacity-50"><strong>?</strong><em>Father</em></div>`;
+            
+            if (mother) parentsHtml += `<div class="tree-node" onclick="openNPC('${mother.id}')"><strong>${mother.name}</strong><em>Mother</em></div>`;
+            else parentsHtml += `<div class="tree-node opacity-50"><strong>?</strong><em>Mother</em></div>`;
+            
+            // Siblings
+            const siblings = state.relationships.filter(r => r.relation === 'Sibling');
+            let siblingsHtml = siblings.map(s => `<div class="tree-node" onclick="openNPC('${s.id}')"><strong>${s.name}</strong><em>${s.gender}</em></div>`).join('');
+            
+            // Player
+            const playerHtml = `<div class="tree-node active-pc"><strong>${state.name}</strong><em>You</em></div>`;
+
             container.innerHTML = `
                 <div class="house-crest opacity-50">🌾</div>
-                <h2 class="text-3xl font-medieval mb-2">Peasant Class</h2>
-                <p class="italic mb-4">You have no House affiliation.</p>
-                <div class="p-4 bg-white/30 border border-dashed border-[#5d4037] rounded text-sm text-left">
-                    <p><strong>Rights:</strong> Minimal. Subject to local lords.</p>
-                    <p><strong>Politics:</strong> None. You are invisible to the court.</p>
-                    <p class="mt-2 text-xs italic">Only by swearing a sword-oath or buying a title can you enter the House structure.</p>
-                </div>`;
+                <h2 class="text-3xl font-medieval mb-2">Peasant Lineage</h2>
+                
+                <div class="bg-white/40 p-4 rounded border border-[#5d4037] mb-4 text-left text-sm italic">
+                    <p>"The earth is our domain, and hard work our legacy."</p>
+                </div>
+
+                <div class="lineage-tree">
+                    <div class="text-xs font-bold uppercase tracking-widest text-amber-900 mb-[-10px]">Generation I</div>
+                    <div class="gen-row">${parentsHtml}</div>
+                    <div class="text-xs font-bold uppercase tracking-widest text-amber-900 mb-[-10px] mt-4">Generation II</div>
+                    <div class="gen-row">
+                        ${playerHtml}
+                        ${siblingsHtml}
+                    </div>
+                </div>
+            `;
             return;
         }
 
         const h = state.house;
-        // Group members by rank
-        let membersHtml = '';
-        HOUSE_RANKS.forEach(rank => {
-            const group = h.members.filter(m => {
-                if(rank === "Lord/Lady") return m.rank === "Lord" || m.rank === "Lady";
-                return m.rank === rank;
-            });
-            
-            if (group.length > 0) {
-                membersHtml += `<div class="mb-2 text-left"><div class="text-xs uppercase font-bold text-amber-900 border-b border-black/10 mb-1">${rank}</div>`;
-                group.forEach(m => {
-                    const isMe = m.name === state.name ? " (You)" : "";
-                    const isKnown = state.relationships.find(r => r.name === m.name); // Check if known
-                    const style = rank.includes("Lord") ? "house-rank-head" : "house-rank-member";
-                    const sameLoc = m.locationIndex === state.location;
-                    
-                    let action = "";
-                    if (!isMe) {
-                        if (isKnown) action = `<span class="text-xs text-green-800 float-right">Known</span>`;
-                        else if (sameLoc) action = `<button onclick="meetHouseMember('${m.name}', '${m.gender}', '${m.rank}')" class="float-right text-[10px] bg-white border border-[#5d4037] px-2 rounded">Meet</button>`;
-                        else action = `<span class="text-xs text-gray-500 float-right italic">Away</span>`;
-                    }
-
-                    membersHtml += `<div class="${style} text-sm clearfix">${m.name}${isMe} ${action}</div>`;
-                });
-                membersHtml += `</div>`;
-            }
-        });
-
         const tierClass = h.tier === 'Royal House' ? 'house-tier-royal' : '';
 
-        container.innerHTML = `
+        // -- DATA PREP --
+        const father = getParent('Father');
+        const mother = getParent('Mother');
+        const siblings = state.relationships.filter(r => r.relation === 'Sibling');
+        const activePC = { name: state.name, rank: state.class.split(' ')[0], id: "PLAYER" };
+
+        // Categorize Members for Roster
+        const ruling = h.members.filter(m => m.rank === 'Lord' || m.rank === 'Lady' || m.rank === 'King' || m.rank === 'Queen');
+        const heirs = h.members.filter(m => m.rank === 'Heir' || m.rank === 'Princess' || m.rank === 'Prince');
+        const family = h.members.filter(m => m.rank === 'Younger Child' || m.rank === 'House Member' || m.rank === 'Kinsman');
+        const retainers = h.members.filter(m => m.rank === 'Sworn Sword' || m.rank === 'Servant' || m.rank === 'Knight' || m.rank === 'Squire');
+
+        // Helper for Roster Item
+        const renderRosterItem = (m) => `
+            <div class="roster-item" onclick="${m.id !== 'PLAYER' ? `openNPC('${m.id}')` : ''}">
+                <div class="font-bold text-sm">${m.name} ${m.id === 'PLAYER' ? '(You)' : ''}</div>
+                <div class="roster-role">${m.rank}</div>
+            </div>`;
+
+        // -- RENDER SECTIONS --
+
+        // 1. Header
+        const headerHtml = `
             <div class="house-crest ${tierClass}">${h.sigil}</div>
             <h2 class="text-4xl font-medieval text-amber-900 mb-1">House ${h.name}</h2>
             <div class="mb-4 text-center">
                 <span class="font-bold text-lg uppercase tracking-widest block">${h.tier}</span>
                 <span class="italic text-sm">"${h.motto}"</span>
             </div>
-            
-            <div class="bg-white/40 p-4 rounded border border-[#5d4037] mb-4 text-left text-sm">
-                <p class="mb-2"><strong>Description:</strong> ${h.desc}</p>
+            <div class="bg-white/40 p-2 rounded border border-[#5d4037] mb-6 text-sm">
                 <p><strong>Heirloom:</strong> ${h.heirloom}</p>
             </div>
-            
-            <div class="bg-white/40 p-4 rounded border border-[#5d4037] mb-4">
-                <h4 class="font-bold border-b border-black/10 mb-2 text-center">House Hierarchy</h4>
-                ${membersHtml}
+        `;
+
+        // 2. Holdings Section
+        const holdingsHtml = `
+            <div class="holding-card">
+                <div class="holding-icon">🏰</div>
+                <h3 class="font-medieval text-2xl text-amber-900 mb-2">Holdings</h3>
+                <div class="font-bold text-lg">${h.holding}</div>
+                <p class="text-sm italic opacity-80 mb-2">${h.holdingDesc}</p>
+                <div class="text-xs font-bold uppercase tracking-wide text-amber-900 mt-2">Seat of Power in ${CITIES[state.location].name}</div>
             </div>
         `;
+
+        // 3. Household Roster
+        let rosterHtml = `<div class="text-left mb-6">`;
+        
+        if (ruling.length > 0) {
+            rosterHtml += `<div class="roster-group"><div class="roster-header">The Ruling Family</div>`;
+            ruling.forEach(m => rosterHtml += renderRosterItem(m));
+            rosterHtml += `</div>`;
+        }
+        
+        if (heirs.length > 0) {
+            rosterHtml += `<div class="roster-group"><div class="roster-header">The Succession</div>`;
+            heirs.forEach(m => rosterHtml += renderRosterItem(m));
+            rosterHtml += `</div>`;
+        }
+
+        if (family.length > 0) {
+            rosterHtml += `<div class="roster-group"><div class="roster-header">Blood of the House</div>`;
+            family.forEach(m => rosterHtml += renderRosterItem(m));
+            rosterHtml += `</div>`;
+        }
+
+        if (retainers.length > 0) {
+            rosterHtml += `<div class="roster-group"><div class="roster-header">The Household & Retainers</div>`;
+            retainers.forEach(m => rosterHtml += renderRosterItem(m));
+            rosterHtml += `</div>`;
+        }
+        rosterHtml += `</div>`;
+
+        // 4. Lineage Tree (Visual)
+        // Re-construct nodes
+        let parentsHtml = '';
+        if (father) parentsHtml += `<div class="tree-node" onclick="openNPC('${father.id}')"><strong>${father.name}</strong><em>${father.rank}</em></div>`;
+        else parentsHtml += `<div class="tree-node opacity-50"><strong>Unknown</strong><em>Lord/Father</em></div>`;
+        
+        if (mother) parentsHtml += `<div class="tree-node" onclick="openNPC('${mother.id}')"><strong>${mother.name}</strong><em>${mother.rank}</em></div>`;
+        else parentsHtml += `<div class="tree-node opacity-50"><strong>Unknown</strong><em>Lady/Mother</em></div>`;
+
+        const siblingNodes = siblings.map(s => `<div class="tree-node" onclick="openNPC('${s.id}')"><strong>${s.name}</strong><em>${s.rank}</em></div>`).join('');
+        const playerHtml = `<div class="tree-node active-pc"><strong>${state.name}</strong><em>${state.class.split(' ')[0]}</em></div>`;
+
+        const treeHtml = `
+            <div class="lineage-tree bg-white/20 rounded border border-[#5d4037]">
+                <h3 class="font-medieval text-2xl text-amber-900 mb-4">Lineage</h3>
+                <div class="text-xs font-bold uppercase tracking-widest text-amber-900 mb-[-10px]">Elders</div>
+                <div class="gen-row">${parentsHtml}</div>
+                <div class="text-xs font-bold uppercase tracking-widest text-amber-900 mb-[-10px] mt-4">Scions</div>
+                <div class="gen-row flex-wrap">
+                    ${playerHtml}
+                    ${siblingNodes}
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = headerHtml + holdingsHtml + rosterHtml + treeHtml;
     }
 
     function meetHouseMember(name, gender, rank) {
