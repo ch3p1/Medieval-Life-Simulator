@@ -264,7 +264,10 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
         }
+        .rel-card:hover { background: rgba(255,255,255,0.5); }
 
         /* Map Styling */
         .city-card {
@@ -324,11 +327,13 @@
             background: var(--parchment);
             border: 4px solid var(--leather);
             padding: 2rem;
-            max-width: 500px;
+            max-width: 600px;
             width: 90%;
             text-align: center;
             box-shadow: 0 0 30px rgba(0,0,0,0.8);
             border-radius: 8px;
+            max-height: 90vh;
+            overflow-y: auto;
         }
         
         .creation-screen {
@@ -360,15 +365,32 @@
         </div>
     </div>
 
+    <!-- NPC Modal -->
+    <div id="npc-modal" class="modal-overlay hidden">
+        <div class="modal-box text-left relative">
+            <button onclick="closeNPC()" class="absolute top-2 right-4 text-xl font-bold">X</button>
+            <div id="npc-content"></div>
+        </div>
+    </div>
+
     <!-- Lore Modal -->
     <div id="lore-modal" class="modal-overlay hidden">
         <div class="modal-box">
             <h2 class="text-4xl font-medieval mb-4 text-amber-900">The Kingdom of Chep</h2>
             <div class="text-left space-y-4 mb-6 text-sm max-h-60 overflow-y-auto pr-2">
-                <p>For centuries, the land was torn asunder by the War of Ashes. City fought city, and brother fought brother.</p>
-                <p>Then came <strong>Hero Ren</strong>. Wielding a blade of starlight, Ren united the warring tribes and forged the Seven Cities into one.</p>
-                <p>He founded <strong>House Chep</strong> to rule from the center, binding the Seven Greater Houses—<strong>Valdoria, Thalor, Grimward, Sunstrider, Ironheart, Moonshadow, and Stormbreaker</strong>—in an eternal oath of peace as his brothers-in-arms.</p>
-                <p>You are born into this Age of Unity. But peace, as they say, is fragile.</p>
+                <p><strong>The War of Ashes:</strong> For four hundred years, the sky was black with the smoke of burning cities. Warlords rose and fell, carving petty fiefdoms from the bones of the old world.</p>
+                <p><strong>The Star-Blade:</strong> Then came <strong>Hero Ren</strong>. He did not come with an army, but with a sword of starlight forged from a fallen meteor. With it, he clove the mountain of Dread Peak and challenged the seven greatest warlords to single combat.</p>
+                <p><strong>The Oath of Unity:</strong> Impressed by his might and mercy, the warlords bent the knee. Ren founded <strong>House Chep</strong> to rule from the center, transforming the warlords into the <strong>Seven Greater Houses</strong>:
+                <ul class="list-disc pl-5 mt-2 mb-2">
+                    <li><strong>Valdoria:</strong> Masters of coin and trade.</li>
+                    <li><strong>Thalor:</strong> Guardians of the stormy seas.</li>
+                    <li><strong>Grimward:</strong> Sentinels of the frozen north.</li>
+                    <li><strong>Sunstrider:</strong> Keepers of the deep forests.</li>
+                    <li><strong>Ironheart:</strong> Forgers of steel and stone.</li>
+                    <li><strong>Moonshadow:</strong> Scholars of the arcane arts.</li>
+                    <li><strong>Stormbreaker:</strong> Watchers of the high peaks.</li>
+                </ul>
+                <p>You are born into this Age of Unity. But the Star-Blade has not been seen in a generation, and old rivalries stir in the dark.</p>
             </div>
             <button onclick="enterWorld()" class="choice-btn text-center justify-center font-bold text-lg">Enter the World</button>
         </div>
@@ -377,7 +399,7 @@
     <!-- Character Creation Overlay -->
     <div id="creation-screen" class="creation-screen">
         <h2 class="text-5xl font-bold mb-2 text-amber-900" style="font-family: 'MedievalSharp';">A Medieval Life</h2>
-        <p class="italic mb-8 text-lg opacity-70">5th Edition Mechanics Edition</p>
+        <p class="italic mb-8 text-lg opacity-70">By Juanse Gutierrez</p>
         
         <div class="max-w-xl mx-auto w-full bg-white/40 p-6 rounded-lg border-2 border-[#5d4037] shadow-xl">
             <h3 class="text-xl font-bold mb-4">Forge Your Destiny</h3>
@@ -519,6 +541,7 @@
             <!-- Tab: Relationships -->
             <div id="rel-tab" class="tab-content hidden p-6 overflow-y-auto">
                 <h2 class="text-3xl font-medieval mb-4 border-b border-black/20 pb-2">Relationships</h2>
+                <p class="text-xs italic mb-2">Click on a person to view their details.</p>
                 <div id="rel-content"></div>
             </div>
 
@@ -614,6 +637,15 @@
                 { title: "Master Artisan", wage: 40, stressMod: 5 }
             ]
         },
+        squire: {
+            name: "Squireship",
+            req: { age: 12, stat: 'str', val: 12 }, // Usually special entry
+            ranks: [
+                { title: "Page", wage: 2, stressMod: 2 },
+                { title: "Squire", wage: 5, stressMod: 4 },
+                { title: "Knight-Errant", wage: 20, stressMod: 6 } // Promotes to full Knight
+            ]
+        },
         military: { 
             name: "Military", 
             req: { age: 14, stat: 'str', val: 11 },
@@ -656,7 +688,8 @@
     const HOUSE_NAMES = {
         royal: ["Chep"],
         greater: ["Valdoria", "Thalor", "Grimward", "Sunstrider", "Ironheart", "Moonshadow", "Stormbreaker"],
-        lesser: ["Oakenshield", "Swiftwater", "Gloomveil", "Brightsteel", "Duskwood", "Cragstone", "Mistwalker"]
+        lesser: ["Oakenshield", "Swiftwater", "Gloomveil", "Brightsteel", "Duskwood", "Cragstone", "Mistwalker", 
+                 "Windrider", "Frostborne", "Emberfall", "Ironfoot", "Ravenhill", "Shadowmere", "Lightbringer"]
     };
     
     const CITIES = [
@@ -681,36 +714,66 @@
         Infancy: [ 
             createEvent('inf_omen', 'Astrological Omen', 'The village elder casts bones upon your crib.', [
                 { text: 'Smile at the Elder', type: 'flavor', effect: () => { state.stats.cha++; modRep('renown', 2); log(`The Elder smiles back. "A charmer," she says. (+1 CHA)`); } },
-                { text: 'Cry loudly', type: 'flavor', effect: () => { state.stats.con++; log(`"Strong lungs," the Elder grunts. (+1 CON)`); } }
+                { text: 'Cry loudly', type: 'flavor', effect: () => { state.stats.con++; log(`"Strong lungs," the Elder grunts. (+1 CON)`); } },
+                { text: 'Sleep', type: 'flavor', effect: () => log("You ignore the prophecy.") }
             ]),
             createEvent('inf_lucky', 'Shiny Pebble', 'You find a perfectly round stone in the crib.', [
-                { text: 'Keep it', type: 'flavor', effect: () => { addItem('Lucky Stone', 'Common', 'A smooth river stone.'); log("It feels lucky."); } }
+                { text: 'Keep it', type: 'flavor', effect: () => { addItem('Lucky Stone', 'Common', 'A smooth river stone.'); log("It feels lucky."); } },
+                { text: 'Eat it', type: 'flavor', effect: () => { state.health -= 1; log("It chokes you slightly. (-1 HP)"); } },
+                { text: 'Throw it', type: 'flavor', effect: () => { state.stats.dex++; log("Good aim! (+1 DEX)"); } }
             ]),
             createEvent('inf_sick', 'The Fever', 'A sweating sickness grips the nursery.', [
-                { text: 'Fight the sickness', type: 'check', stat: 'con', dc: 10, success: 'You break the fever naturally. (+1 CON)', fail: 'The fever breaks, but leaves you frail. (-1 STR)', onSuccess: () => state.stats.con++, onFail: () => state.stats.str-- }
+                { text: 'Fight the sickness', type: 'check', stat: 'con', dc: 10, success: 'You break the fever naturally. (+1 CON)', fail: 'The fever breaks, but leaves you frail. (-1 STR)', onSuccess: () => state.stats.con++, onFail: () => state.stats.str-- },
+                { text: 'Cry for help', type: 'flavor', effect: () => { if(getParent()) log("Your parent comforts you."); else log("No one comes."); } }
+            ]),
+            createEvent('inf_first_words', 'First Words', 'You feel a desire to speak.', [
+                { text: 'Say "Mama"', type: 'flavor', effect: () => { if(hasParent('Mother')) { modRel(getParent('Mother').id, 10); log("Mother is delighted."); } else log("You call out to the void."); } },
+                { text: 'Say "Dada"', type: 'flavor', effect: () => { if(hasParent('Father')) { modRel(getParent('Father').id, 10); log("Father beams with pride."); } else log("You call out to the void."); } },
+                { text: 'Say "Food"', type: 'flavor', effect: () => { state.stats.con++; log("Priorities. (+1 CON)"); } }
             ])
         ],
         Childhood: [
             createEvent('child_bully', 'The Bully', 'A larger child demands your lunch.', [
                 { text: 'Punch him', type: 'check', stat: 'str', dc: 12, success: 'You bloody his nose! (+Honor)', fail: 'He pummels you.', onSuccess: () => modRep('honor', 5), onFail: () => modRep('honor', -2) },
-                { text: 'Outsmart him', type: 'check', stat: 'int', dc: 13, success: 'You trick him.', fail: 'He hits you.', onSuccess: () => state.stats.int++, onFail: () => takeDamage(5) }
+                { text: 'Outsmart him', type: 'check', stat: 'int', dc: 13, success: 'You trick him.', fail: 'He hits you.', onSuccess: () => state.stats.int++, onFail: () => takeDamage(5) },
+                { text: 'Give Lunch', type: 'flavor', effect: () => { modRep('honor', -1); log("You go hungry."); } }
             ]),
             createEvent('child_find', 'Lost Heirloom', 'Digging in the mud, you hit metal.', [
-                { text: 'Clean it off', type: 'check', stat: 'int', dc: 10, success: 'It is a silver locket!', fail: 'Just rusty scrap.', onSuccess: () => addItem('Rusted Locket', 'Common', 'Once held a portrait.'), onFail: () => {} }
+                { text: 'Clean it off', type: 'check', stat: 'int', dc: 10, success: 'It is a silver locket!', fail: 'Just rusty scrap.', onSuccess: () => addItem('Rusted Locket', 'Common', 'Once held a portrait.'), onFail: () => {} },
+                { text: 'Bury it', type: 'flavor', effect: () => log("Some secrets should stay buried.") },
+                { text: 'Show parent', type: 'flavor', effect: () => { if(getParent()) { modRel(getParent().id, 5); log("They pat your head."); } else log("You have no one to show."); } }
+            ]),
+            createEvent('child_parent_lesson', 'A Lesson', 'Your parent tries to teach you a trade.', [
+                { text: 'Listen intently', type: 'check', stat: 'wis', dc: 10, success: 'You learn well. (+1 WIS)', fail: 'You get bored.', onSuccess: () => state.stats.wis++, onFail: () => {} },
+                { text: 'Play instead', type: 'flavor', effect: () => { state.stats.dex++; log("You run around. (+1 DEX)"); } },
+                { text: 'Argue', type: 'flavor', effect: () => { state.stats.cha++; log("You talk back. (+1 CHA)"); } }
+            ]),
+            createEvent('child_temple', 'Temple Visit', 'The bells ring for prayer.', [
+                { text: 'Pray devoutly', type: 'check', stat: 'wis', dc: 12, success: 'You feel a presence. (+Piety)', fail: 'You fall asleep.', onSuccess: () => modRep('piety', 5), onFail: () => {} },
+                { text: 'Steal offerings', type: 'check', stat: 'dex', dc: 14, success: 'You snag a coin. (+2g, +Infamy)', fail: 'Caught by a priest!', onSuccess: () => { state.gold += 2; modRep('infamy', 2); }, onFail: () => modRep('infamy', 5) }
             ])
         ],
         Teen: [
              createEvent('teen_love', 'First Crush', 'You catch the eye of a peer.', [
                 { text: 'Woo with poetry', type: 'check', stat: 'cha', dc: 13, success: 'Romance blooms.', fail: 'You stutter.', onSuccess: () => state.stats.cha++, onFail: () => state.stats.cha-- },
-                { text: 'Impress with strength', type: 'check', stat: 'str', dc: 12, success: 'They admire you.', fail: 'You fail to lift the heavy sack.', onSuccess: () => state.stats.str++, onFail: () => {} }
+                { text: 'Impress with strength', type: 'check', stat: 'str', dc: 12, success: 'They admire you.', fail: 'You fail to lift the heavy sack.', onSuccess: () => state.stats.str++, onFail: () => {} },
+                { text: 'Ignore them', type: 'flavor', effect: () => { state.stats.wis++; log("Focus on studies. (+1 WIS)"); } }
             ]),
             createEvent('teen_loot', 'Old Battlefield', 'You scavenge an old skirmish site.', [
-                { text: 'Search bodies', type: 'check', stat: 'wis', dc: 14, success: 'You find a blade!', fail: 'Nothing but bones.', onSuccess: () => addItem('Soldier\'s Dagger', 'Uncommon', 'A serviceable steel blade.'), onFail: () => {} }
+                { text: 'Search bodies', type: 'check', stat: 'wis', dc: 14, success: 'You find a blade!', fail: 'Nothing but bones.', onSuccess: () => addItem('Soldier\'s Dagger', 'Uncommon', 'A serviceable steel blade.'), onFail: () => {} },
+                { text: 'Say a prayer', type: 'flavor', effect: () => { modRep('piety', 2); log("Rest in peace."); } },
+                { text: 'Leave', type: 'flavor', effect: () => log("You leave the dead alone.") }
+            ]),
+            createEvent('teen_rebel', 'Rebellion', 'Your parents forbid you from the festival.', [
+                { text: 'Sneak out', type: 'check', stat: 'dex', dc: 14, success: 'A wild night! (+Renown)', fail: 'Caught and grounded.', onSuccess: () => modRep('renown', 5), onFail: () => modRep('honor', -2) },
+                { text: 'Obey', type: 'flavor', effect: () => { modRep('piety', 2); log("You meditate at home."); } },
+                { text: 'Argue loudly', type: 'check', stat: 'cha', dc: 12, success: 'They let you go.', fail: 'You are confined to your room.', onSuccess: () => state.stats.cha++, onFail: () => {} }
             ])
         ],
         Adult: [
             createEvent('adult_war', 'Call to Arms', 'Levies are raised.', [
-                { text: 'Go to War', type: 'check', stat: 'con', dc: 14, success: 'You survive a veteran. (+50 GP, +Honor)', fail: 'You return with a limp. (-1 DEX)', onSuccess: () => { state.gold += 50; addTrait('Veteran'); modRep('honor', 10); }, onFail: () => state.stats.dex-- }
+                { text: 'Go to War', type: 'check', stat: 'con', dc: 14, success: 'You survive a veteran. (+50 GP, +Honor)', fail: 'You return with a limp. (-1 DEX)', onSuccess: () => { state.gold += 50; addTrait('Veteran'); modRep('honor', 10); }, onFail: () => state.stats.dex-- },
+                { text: 'Pay substitute (20 GP)', type: 'flavor', req: (s) => s.gold >= 20, effect: () => { state.gold -= 20; log("You paid a coward's tax."); modRep('honor', -5); } }
             ]),
             createEvent('adult_magic', 'Arcane Discovery', 'You find a glowing rune.', [
                 { text: 'Touch it', type: 'check', stat: 'int', dc: 16, success: 'It fuses to your hand!', fail: 'It burns you.', onSuccess: () => addItem('Ring of Protection', 'Rare', 'Grants a magical shield.'), onFail: () => takeDamage(10) }
@@ -733,10 +796,10 @@
                 { text: 'Pray', type: 'check', stat: 'wis', dc: 10, success: 'You feel blessed. (+Piety)', fail: 'Nothing happens.', onSuccess: () => { modRep('piety', 5); state.health = Math.min(state.maxHealth, state.health + 5); log("Healed 5 HP."); }, onFail: () => {} }
             ])
         ],
-        // New Pools
         Quest: [
             createEvent('quest_monster', 'The Beast', 'A monster plagues the local farms.', [
-                { text: 'Slay it', type: 'check', stat: 'str', dc: 15, success: 'The beast falls! (+Renown, +50g)', fail: 'It mauls you.', onSuccess: () => { modRep('renown', 10); state.gold += 50; }, onFail: () => takeDamage(10) }
+                { text: 'Slay it', type: 'check', stat: 'str', dc: 15, success: 'The beast falls! (+Renown, +50g)', fail: 'It mauls you.', onSuccess: () => { modRep('renown', 10); state.gold += 50; }, onFail: () => takeDamage(10) },
+                { text: 'Track it', type: 'check', stat: 'wis', dc: 14, success: 'You find its lair and loot it. (+30g)', fail: 'You get lost.', onSuccess: () => state.gold += 30, onFail: () => {} }
             ]),
             createEvent('quest_escort', 'Merchant Escort', 'A merchant needs guards.', [
                 { text: 'Guard him', type: 'check', stat: 'wis', dc: 12, success: 'Safe arrival. (+20g)', fail: 'Bandits raid the caravan.', onSuccess: () => state.gold += 20, onFail: () => { state.health -= 5; } }
@@ -819,13 +882,25 @@
         return list[Math.floor(Math.random() * list.length)];
     }
 
+    // Helper to add parents with death chance
+    function tryAddParent(relation, gender, rank) {
+        const roll = Math.random();
+        if (roll < 0.1) {
+            log(`Your ${relation} is unknown or deceased.`);
+            return null;
+        } else {
+            const name = getRandomName(gender);
+            return addRelationship(name, relation, 80 + Math.floor(Math.random()*20), gender, rank);
+        }
+    }
+
     function generateHouse() {
         if (state.flags.startOrigin === 'Peasant') {
             state.socialClass = "Peasant";
             state.house = null;
             state.class = "Peasant";
-            addRelative("Father", "Male", "Peasant");
-            addRelative("Mother", "Female", "Peasant");
+            tryAddParent("Father", "Male", "Peasant");
+            tryAddParent("Mother", "Female", "Peasant");
             return;
         }
 
@@ -861,16 +936,20 @@
         addHouseMember(lordName, "Male", "Lord");
         addHouseMember(ladyName, "Female", "Lady");
 
+        // Parents logic for nobles
         if (rank === "Heir" || rank === "Younger Child") {
+            // Parents are the Lord/Lady
+            // Assume Lord/Lady exist (we just added them)
+            // But we need to add them to relationships
             addRelationship(lordName, "Father", 100, "Male", "Lord");
             addRelationship(ladyName, "Mother", 100, "Female", "Lady");
         } else {
-            const fatherName = getRandomName('Male');
-            const motherName = getRandomName('Female');
-            addHouseMember(fatherName, "Male", "House Member");
-            addHouseMember(motherName, "Female", "House Member");
-            addRelationship(fatherName, "Father", 90, "Male", "House Member");
-            addRelationship(motherName, "Mother", 90, "Female", "House Member");
+            // Random parents within house
+            const father = tryAddParent("Father", "Male", "House Member");
+            if(father) addHouseMember(father.name, "Male", "House Member");
+            
+            const mother = tryAddParent("Mother", "Female", "House Member");
+            if(mother) addHouseMember(mother.name, "Female", "House Member");
         }
 
         addHouseMember(state.name, state.gender, rank);
@@ -884,18 +963,29 @@
         });
     }
 
-    function addRelative(relation, gender, rank) {
-        const name = getRandomName(gender);
-        addRelationship(name, relation, 80 + Math.floor(Math.random()*20), gender, rank);
-    }
-
     // New Arg: locationIndex (defaults to current city if null)
     function addRelationship(name, relation, affinity, gender, rank, locIndex = null) {
         const location = locIndex !== null ? locIndex : Math.floor(Math.random() * CITIES.length);
-        state.relationships.push({
+        const person = {
             id: Math.random().toString(36).substr(2, 9),
-            name, relation, affinity, gender, rank, locationIndex: location
-        });
+            name, relation, affinity, gender, rank, locationIndex: location,
+            stats: { 
+                str: 8 + Math.floor(Math.random()*8),
+                int: 8 + Math.floor(Math.random()*8),
+                cha: 8 + Math.floor(Math.random()*8)
+            }
+        };
+        state.relationships.push(person);
+        return person;
+    }
+
+    function getParent(type) {
+        if (!type) return state.relationships.find(r => r.relation === 'Father' || r.relation === 'Mother');
+        return state.relationships.find(r => r.relation === type);
+    }
+    
+    function hasParent(type) {
+        return !!state.relationships.find(r => r.relation === type);
     }
 
     function startGame() {
@@ -935,7 +1025,8 @@
         state.activityLog = { love: 0, quest: 0, crime: 0, train: 0 }; // Reset limits
         
         const conMod = getModifier(state.stats.con);
-        const hpGain = Math.max(1, Math.floor(Math.random() * 10) + 1 + conMod);
+        // HP Increase: 1d4 + CON (min 1)
+        const hpGain = Math.max(1, Math.floor(Math.random() * 4) + 1 + conMod);
         state.maxHealth += hpGain;
         state.health = Math.min(state.maxHealth, state.health + hpGain);
 
@@ -996,15 +1087,20 @@
         } else {
             log(`You browse the wares but have no coin.`);
         }
+        switchTab('log');
     }
 
     function actSocialize() {
         const gender = Math.random() > 0.5 ? 'Male' : 'Female';
         const name = getRandomName(gender);
-        // Add to current city
-        addRelationship(name, "Acquaintance", 20, gender, "Commoner", state.location);
-        log(`You met ${name} in the city square.`);
+        // Chance to be a Knight
+        let rank = "Commoner";
+        if (Math.random() > 0.9) rank = gender === 'Male' ? 'Sir' : 'Dame'; // Knight title
+        
+        addRelationship(name, "Acquaintance", 20, gender, rank, state.location);
+        log(`You met ${name} (${rank}) in the city square.`);
         updateUI();
+        switchTab('log');
     }
 
     function actLove() {
@@ -1014,18 +1110,21 @@
         addRelationship(name, "Love Interest", 40, gender, "Commoner", state.location);
         log(`You caught the eye of ${name}.`);
         updateUI();
+        switchTab('log');
     }
 
     function actQuest() {
         state.activityLog.quest++;
         const pool = POOLS.Quest;
         renderEvent(pool[Math.floor(Math.random() * pool.length)]);
+        switchTab('log');
     }
 
     function actCrime() {
         state.activityLog.crime++;
         const pool = POOLS.Crime;
         renderEvent(pool[Math.floor(Math.random() * pool.length)]);
+        switchTab('log');
     }
 
     function actTrain() {
@@ -1034,6 +1133,7 @@
         state.stats[stat]++;
         log(`You trained hard. (+1 ${stat.toUpperCase()})`);
         updateUI();
+        switchTab('log');
     }
 
     // --- MAP SYSTEM ---
@@ -1101,10 +1201,59 @@
         if (state.health <= 0) death();
     }
 
-    // --- SETTINGS ---
+    // --- SETTINGS & NPC SHEETS ---
     function openSettings() { document.getElementById('settings-modal').classList.remove('hidden'); }
     function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
     function restartGame() { location.reload(); }
+    
+    function closeNPC() { document.getElementById('npc-modal').classList.add('hidden'); }
+    
+    function openNPC(id) {
+        const r = state.relationships.find(x => x.id === id);
+        if(!r) return;
+        const loc = CITIES[r.locationIndex].name;
+        const isKnight = r.rank === 'Sir' || r.rank === 'Dame';
+        
+        let squireBtn = '';
+        if (isKnight && state.age >= 12 && state.occupation?.id !== 'squire') {
+            squireBtn = `<button onclick="askToSquire('${id}')" class="w-full bg-amber-800 text-white p-2 rounded mt-2">Ask to Squire</button>`;
+        }
+
+        let html = `
+            <h2 class="text-3xl font-medieval mb-1">${r.name}</h2>
+            <div class="text-sm opacity-70 mb-4">${r.rank} • ${r.gender} • ${loc}</div>
+            
+            <div class="grid grid-cols-3 gap-2 mb-4 text-center">
+                <div class="bg-black/5 p-1 rounded"><div class="text-xs font-bold">STR</div><div>${r.stats.str}</div></div>
+                <div class="bg-black/5 p-1 rounded"><div class="text-xs font-bold">INT</div><div>${r.stats.int}</div></div>
+                <div class="bg-black/5 p-1 rounded"><div class="text-xs font-bold">CHA</div><div>${r.stats.cha}</div></div>
+            </div>
+            
+            <div class="mb-4">
+                <div class="flex justify-between text-xs mb-1"><span>Affinity</span><span>${r.affinity}%</span></div>
+                <div class="w-full h-3 bg-black/10 rounded overflow-hidden"><div class="h-full bg-pink-600" style="width:${r.affinity}%"></div></div>
+            </div>
+            
+            <p class="text-sm italic mb-4">"${r.relation}"</p>
+            ${squireBtn}
+        `;
+        document.getElementById('npc-content').innerHTML = html;
+        document.getElementById('npc-modal').classList.remove('hidden');
+    }
+
+    function askToSquire(id) {
+        const r = state.relationships.find(x => x.id === id);
+        closeNPC();
+        // Check check
+        const roll = rollD20(getModifier(state.stats.str));
+        if (roll.total >= 12 && r.affinity >= 30) {
+            log(`<strong class="text-green-800">Success!</strong> ${r.name} accepts you as a squire.`);
+            joinJob('squire'); // Using the new squire career
+        } else {
+            log(`<strong class="text-red-800">Refused.</strong> ${r.name} says you are not ready.`);
+        }
+        updateUI();
+    }
 
     // --- OCCUPATION SYSTEM LOGIC ---
     function processOccupation() {
@@ -1224,7 +1373,7 @@
             }
 
             return `
-            <div class="rel-card">
+            <div class="rel-card" onclick="openNPC('${r.id}')">
                 <div>
                     <div class="font-bold">${r.name}</div>
                     <div class="text-xs opacity-70">${r.relation} • ${r.rank}</div>
@@ -1235,7 +1384,7 @@
                     <div class="w-24 h-2 bg-black/10 rounded overflow-hidden">
                         <div class="h-full affinity-fill" style="width: ${r.affinity}%"></div>
                     </div>
-                    <div class="flex gap-1 mt-1">
+                    <div class="flex gap-1 mt-1" onclick="event.stopPropagation()">
                         ${actions}
                     </div>
                 </div>
@@ -1272,8 +1421,16 @@
                 membersHtml += `<div class="mb-2 text-left"><div class="text-xs uppercase font-bold text-amber-900 border-b border-black/10 mb-1">${rank}</div>`;
                 group.forEach(m => {
                     const isMe = m.name === state.name ? " (You)" : "";
+                    const isKnown = state.relationships.find(r => r.name === m.name); // Check if known
                     const style = rank.includes("Lord") ? "house-rank-head" : "house-rank-member";
-                    membersHtml += `<div class="${style} text-sm">${m.name}${isMe}</div>`;
+                    
+                    let action = "";
+                    if (!isMe) {
+                        if (isKnown) action = `<span class="text-xs text-green-800 float-right">Known</span>`;
+                        else action = `<button onclick="meetHouseMember('${m.name}', '${m.gender}', '${m.rank}')" class="float-right text-[10px] bg-white border border-[#5d4037] px-2 rounded">Meet</button>`;
+                    }
+
+                    membersHtml += `<div class="${style} text-sm clearfix">${m.name}${isMe} ${action}</div>`;
                 });
                 membersHtml += `</div>`;
             }
@@ -1295,6 +1452,12 @@
         `;
     }
 
+    function meetHouseMember(name, gender, rank) {
+        addRelationship(name, "Kinsman", 30, gender, rank, state.location);
+        log(`You introduced yourself to ${name} of your House.`);
+        updateUI();
+    }
+
     function renderOccupationTab() {
         const container = document.getElementById('occ-content');
         if (!state.occupation) {
@@ -1310,6 +1473,7 @@
                 html += `<h4 class="font-bold border-b border-black/10 mb-2 mt-4">New Career</h4>`;
             }
             for (let id in CAREERS) {
+                if (id === 'squire') continue; // Special entry only
                 const c = CAREERS[id];
                 let canJoin = true;
                 if (c.req.age && state.age < c.req.age) canJoin = false;
@@ -1353,6 +1517,11 @@
 
     function modRep(type, amt) { state.reputation[type] += amt; }
     
+    function modRel(id, amt) {
+        const r = state.relationships.find(x => x.id === id);
+        if(r) r.affinity = Math.min(100, Math.max(0, r.affinity + amt));
+    }
+
     function checkUnlocks() {
         const ul = document.getElementById('unlock-list');
         const addUnlock = (txt) => { const li = document.createElement('li'); li.innerText = `${txt} (Age ${state.age})`; li.style.color = "var(--ink)"; li.style.fontWeight = "bold"; ul.prepend(li); };
