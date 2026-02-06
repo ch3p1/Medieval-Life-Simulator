@@ -1123,7 +1123,7 @@
             createEvent('inf_6', 'Night Shadows', 'The shadows in your room look like monsters.', [
                 { text: 'Hide', type: 'check', stat: 'dex', dc: 10, success: 'You vanish under the blanket. (+Stealth)', fail: 'The blanket tangles you.', onSuccess: () => state.stats.dex++, onFail: () => {} },
                 { text: 'Stare Down', type: 'check', stat: 'wis', dc: 14, success: 'You realize it is just a coat rack. (+1 WIS)', fail: 'It moves! (Fearful)', onSuccess: () => state.stats.wis++, onFail: () => addTrait('Fearful') },
-                { text: 'Scream for Mom', type: 'flavor', effect: () => { if(hasParent('Mother')) log("She comes to comfort you."); else log("No one comes."); } }
+                { text: 'Scream for help', type: 'flavor', effect: () => { if(hasParent('Mother')) log("She comes to comfort you."); else log("No one comes."); } }
             ]),
             createEvent('inf_7', 'The Stray Dog', 'A massive hound wanders into the yard.', [
                 { text: 'Ride it', type: 'check', stat: 'str', dc: 15, success: 'To battle! (+1 STR, +Renown)', fail: 'It shakes you off.', onSuccess: () => { state.stats.str++; modRep('renown', 2); }, onFail: () => takeDamage(2) },
@@ -1138,7 +1138,7 @@
             createEvent('inf_9', 'Shiny Thing', 'You find a copper coin on the floor.', [
                 { text: 'Eat it', type: 'check', stat: 'con', dc: 15, success: 'You pass it later... (+1 Gold)', fail: 'Choking hazard! (-2 HP)', onSuccess: () => state.gold++, onFail: () => takeDamage(2) },
                 { text: 'Hide it', type: 'check', stat: 'dex', dc: 12, success: 'My precious... (+1 Gold)', fail: 'Mother sees you.', onSuccess: () => state.gold++, onFail: () => {} },
-                { text: 'Show Mom', type: 'flavor', effect: () => { modRep('honor', 1); log("She pats your head. Good baby."); } }
+                { text: 'Show parent', type: 'flavor', effect: () => { modRep('honor', 1); log("She pats your head. Good baby."); } }
             ]),
             createEvent('inf_10', 'First Words', 'You feel a desire to speak.', [
                 { text: 'Say "Dada"', type: 'flavor', effect: () => { if(hasParent('Father')) { modRel(getParent('Father').id, 10); log("Father beams."); } else log("He is not here."); } },
