@@ -26,6 +26,7 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
+            overflow: hidden;
         }
 
         .parchment-container {
@@ -58,7 +59,7 @@
         }
 
         .sidebar {
-            width: 250px;
+            width: 220px;
             border-right: 2px solid rgba(44, 30, 22, 0.1);
             display: flex;
             flex-direction: column;
@@ -66,12 +67,13 @@
         }
 
         .tab-btn {
-            padding: 15px;
+            padding: 12px 15px;
             text-align: left;
             border-bottom: 1px solid rgba(44, 30, 22, 0.05);
             font-family: 'MedievalSharp', cursive;
             cursor: pointer;
             transition: background 0.2s;
+            font-size: 0.9rem;
         }
 
         .tab-btn:hover { background: rgba(0,0,0,0.05); }
@@ -87,54 +89,73 @@
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            padding: 1rem;
+            gap: 6px;
+            padding: 0.75rem;
             background: rgba(255, 255, 255, 0.3);
-            font-size: 0.85rem;
+            font-size: 0.8rem;
         }
 
         .stat-box {
             text-align: center;
             border: 1px solid rgba(44, 30, 22, 0.1);
-            padding: 3px;
+            padding: 2px;
             border-radius: 4px;
         }
 
-        .stat-val { font-weight: bold; display: block; font-size: 1rem; }
+        .stat-val { font-weight: bold; display: block; font-size: 0.95rem; }
 
         #event-log {
             flex-grow: 1;
             overflow-y: auto;
-            padding: 1.5rem;
+            padding: 1rem;
             display: flex;
             flex-direction: column;
-            gap: 1rem;
-            mask-image: linear-gradient(to bottom, transparent, black 5%, black 95%, transparent);
+            gap: 0.75rem;
         }
 
         .event-entry {
             border-left: 3px solid var(--leather);
-            padding: 10px;
-            animation: fadeIn 0.5s ease-out;
-            background: rgba(255,255,255,0.2);
+            padding: 8px 12px;
+            animation: fadeIn 0.4s ease-out;
+            background: rgba(255,255,255,0.25);
             border-radius: 0 4px 4px 0;
+            font-size: 0.9rem;
         }
 
         .choices-area {
-            padding: 1.5rem;
+            padding: 1.25rem;
             border-top: 2px solid rgba(44, 30, 22, 0.2);
-            background: rgba(0,0,0,0.02);
+            background: rgba(0,0,0,0.04);
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            align-items: center;
+            gap: 8px;
+        }
+
+        .choice-btn {
+            background: var(--leather);
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 4px;
+            font-family: 'MedievalSharp', cursive;
+            text-align: left;
+            width: 100%;
+            transition: all 0.2s;
+            border: 1px solid #3e2723;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        .choice-btn:hover:not(:disabled) { 
+            background: #795548; 
+            transform: translateX(5px);
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
         }
 
         .affinity-bar {
-            height: 8px;
+            height: 6px;
             background: #ccc;
-            border-radius: 4px;
-            width: 100px;
+            border-radius: 3px;
+            width: 80px;
             overflow: hidden;
         }
 
@@ -143,19 +164,13 @@
             transition: width 0.3s ease;
         }
 
-        button {
+        button.standard {
             background: var(--leather);
-            color: #fff;
-            padding: 8px 15px;
-            border-radius: 2px;
-            font-family: 'MedievalSharp', cursive;
-            transition: all 0.2s;
-            border: 1px solid #3e2723;
-            cursor: pointer;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.8rem;
         }
-
-        button:hover:not(:disabled) { background: #795548; transform: translateY(-1px); }
-        button:disabled { background: #9e9e9e; cursor: not-allowed; opacity: 0.6; }
 
         .creation-screen {
             position: absolute;
@@ -169,8 +184,8 @@
             overflow-y: auto;
         }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        ::-webkit-scrollbar { width: 8px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: var(--leather); border-radius: 10px; }
         
         .gender-btn.active {
@@ -182,42 +197,44 @@
 <body>
 
 <div class="parchment-container">
+    <!-- Character Creation -->
     <div id="creation-screen" class="creation-screen">
         <h2 class="text-4xl font-bold mb-4" style="font-family: 'MedievalSharp';">Birth of a Legend</h2>
         <div class="mb-6">
-            <p class="italic mb-4">The Norns begin to spin your thread. Choose your name and nature.</p>
-            <input type="text" id="char-name" placeholder="First Name" class="p-2 border border-black bg-white/50 text-center mb-4 w-64">
+            <p class="italic mb-4 text-amber-900">The Weaver of Fate awaits. Shape your vessel.</p>
+            <input type="text" id="char-name" placeholder="First Name" class="p-2 border border-black bg-white/50 text-center mb-4 w-64 outline-none focus:bg-white">
             <div class="flex justify-center gap-4">
-                <button id="gender-m" class="gender-btn active" onclick="setGender('Male')">Male</button>
-                <button id="gender-f" class="gender-btn" onclick="setGender('Female')">Female</button>
-                <button id="gender-o" class="gender-btn" onclick="setGender('Other')">Other</button>
+                <button id="gender-m" class="choice-btn active w-24 text-center" onclick="setGender('Male')">Male</button>
+                <button id="gender-f" class="choice-btn w-24 text-center" onclick="setGender('Female')">Female</button>
+                <button id="gender-o" class="choice-btn w-24 text-center" onclick="setGender('Other')">Other</button>
             </div>
         </div>
         <div id="allocators" class="max-w-md mx-auto w-full mb-2"></div>
         <div class="mb-4">
-            <button onclick="randomizePoints()" class="text-sm bg-amber-800">Randomize Points</button>
+            <button onclick="randomizePoints()" class="text-xs bg-amber-800 text-white px-4 py-1 rounded">Blessings of the Heavens (Random)</button>
         </div>
         <div>
             <h3 class="text-xl font-bold">Remaining Potential: <span id="points-left">20</span></h3>
-            <p class="text-sm opacity-70 mt-2">Lineage and Status are randomized at birth (Age 0).</p>
-            <button id="start-btn" class="mt-6 text-xl px-10 py-4" disabled onclick="startGame()">Step Into the Light</button>
+            <button id="start-btn" class="mt-6 text-xl px-12 py-4 choice-btn opacity-50 text-center" style="width: auto;" disabled onclick="startGame()">Step Into the Light</button>
         </div>
     </div>
 
+    <!-- Main Header -->
     <div class="header">
         <h1 class="text-2xl" id="display-full-name">A Medieval Chronicle</h1>
-        <p id="year-display" class="italic text-sm">Year 1200</p>
+        <p id="year-display" class="italic text-xs opacity-70">Year 1200</p>
     </div>
 
+    <!-- Main Content -->
     <div class="main-layout">
         <div class="sidebar">
-            <div class="tab-btn active" onclick="switchTab('log')">Chronicle Log</div>
-            <div class="tab-btn" onclick="switchTab('relationships')">Relationships</div>
-            <div id="job-tab-btn" class="tab-btn hidden" onclick="switchTab('occupation')">Occupation</div>
+            <div id="tab-log" class="tab-btn active" onclick="switchTab('log')">📜 Chronicle Log</div>
+            <div id="tab-relationships" class="tab-btn" onclick="switchTab('relationships')">👥 Relationships</div>
+            <div id="job-tab-btn" class="tab-btn hidden" onclick="switchTab('occupation')">⚒️ Occupation</div>
             
             <div class="mt-auto p-4 border-t border-black/10">
-                <div class="text-xs uppercase font-bold opacity-50">Sexuality</div>
-                <div id="sexuality-display" class="text-sm">Undetermined</div>
+                <div class="text-[10px] uppercase font-bold opacity-50">Sexuality</div>
+                <div id="sexuality-display" class="text-xs font-bold">Undetermined</div>
             </div>
         </div>
 
@@ -236,39 +253,36 @@
 
             <div id="log-tab" class="tab-content flex-grow flex flex-col overflow-hidden">
                 <div id="event-log"></div>
+                <div id="decision-prompt" class="px-4 py-2 bg-black/5 font-bold text-amber-900 border-t border-black/10">What shall you do?</div>
                 <div id="choices-container" class="choices-area"></div>
             </div>
 
             <div id="relationships-tab" class="tab-content hidden p-6 overflow-y-auto">
-                <h2 class="text-2xl font-bold mb-4" style="font-family: 'MedievalSharp';">Relationships</h2>
-                <div id="rel-list" class="space-y-4"></div>
-                <div id="exes-list" class="mt-8 pt-4 border-t border-black/20 space-y-2">
-                    <h3 class="text-lg font-bold">Ex-Partners</h3>
-                </div>
+                <h2 class="text-2xl font-bold mb-4" style="font-family: 'MedievalSharp';">Family & Connections</h2>
+                <div id="rel-list" class="space-y-3"></div>
             </div>
 
             <div id="occupation-tab" class="tab-content hidden p-6 overflow-y-auto">
-                <h2 class="text-2xl font-bold mb-4" style="font-family: 'MedievalSharp';">Occupation</h2>
-                <div id="job-info">
-                    <p class="italic">You are currently unemployed.</p>
-                </div>
+                <h2 class="text-2xl font-bold mb-4" style="font-family: 'MedievalSharp';">Current Life's Work</h2>
+                <div id="job-info"></div>
                 <div id="job-offers" class="mt-4 space-y-2"></div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal for Interactions -->
-<div id="modal-overlay" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
-    <div class="bg-[#f4e4bc] border-4 border-[#5d4037] p-6 max-w-sm w-full rounded shadow-2xl">
-        <h3 id="modal-title" class="text-xl font-bold mb-2">Interaction</h3>
-        <p id="modal-text" class="mb-4"></p>
+<!-- Interaction Modal -->
+<div id="modal-overlay" class="hidden fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
+    <div class="bg-[#f4e4bc] border-4 border-[#5d4037] p-6 max-w-sm w-full rounded shadow-2xl relative">
+        <h3 id="modal-title" class="text-xl font-bold mb-2" style="font-family: 'MedievalSharp';">Interaction</h3>
+        <p id="modal-text" class="mb-4 text-sm"></p>
         <div id="modal-actions" class="flex flex-col gap-2"></div>
-        <button onclick="closeModal()" class="mt-4 bg-gray-600 w-full text-sm">Close</button>
+        <button onclick="closeModal()" class="mt-4 bg-gray-600 text-white w-full py-2 text-xs uppercase tracking-widest">Return</button>
     </div>
 </div>
 
 <script>
+    // --- DATABASE ---
     const Surnames = {
         Peasant: ["Miller", "Smith", "Cooper", "Thatcher", "Baker", "Carter", "Wood", "Fisher"],
         Merchant: ["Sterling", "Goldbloom", "Mercator", "Vane", "Silkworth", "Coiner"],
@@ -282,44 +296,91 @@
     };
 
     const Jobs = [
-        { name: "Blacksmith Apprentice", req: { str: 10, con: 10 }, salary: 5, promo: "Journeyman Smith", type: "Labor" },
-        { name: "Squire", req: { str: 11, cha: 10 }, salary: 8, promo: "Knight", type: "Noble/Martial" },
-        { name: "Stable Hand", req: { con: 9 }, salary: 3, promo: "Head Groom", type: "Labor" },
-        { name: "Scribe's Apprentice", req: { int: 11 }, salary: 6, promo: "Court Scribe", type: "Scholar" },
-        { name: "Kitchen Scullery", req: { dex: 10 }, salary: 3, promo: "Sous Chef", type: "Labor" }
+        { name: "Blacksmith Apprentice", req: { str: 10, con: 10 }, salary: 5, promo: "Journeyman Smith" },
+        { name: "Squire", req: { str: 11, cha: 10 }, salary: 8, promo: "Knight" },
+        { name: "Stable Hand", req: { con: 9 }, salary: 3, promo: "Head Groom" },
+        { name: "Scribe's Apprentice", req: { int: 11 }, salary: 6, promo: "Court Scribe" },
+        { name: "Kitchen Scullery", req: { dex: 10 }, salary: 3, promo: "Sous Chef" }
     ];
 
-    const gameState = {
-        firstName: "", lastName: "", gender: "Male", year: 1200, age: 0, isAlive: true, points: 20,
+    // --- GAME STATE ---
+    const state = {
+        firstName: "", lastName: "", gender: "Male", year: 1200, age: 0, points: 20,
         stats: { str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 },
         gold: 0, status: '', rarity: '', sexPref: 'Undetermined',
         job: null, jobPerformance: 0,
-        relationships: [], exes: [], currentTab: 'log'
+        relationships: [],
+        activeScenario: null
     };
 
-    const Dice = {
-        roll: (sides = 20) => Math.floor(Math.random() * sides) + 1,
-        getModifier: (score) => Math.floor((score - 10) / 2),
-        abilityCheck: (score, dc) => {
-            const roll = Dice.roll(20);
-            const total = roll + Dice.getModifier(score);
-            return { success: total >= dc, roll, total };
-        }
+    // --- SCENARIO ENGINE ---
+    // Scenarios are events that offer choices.
+    const Scenarios = {
+        Childhood: [
+            {
+                title: "The Wooden Sword",
+                text: "Your father carved you a wooden sword. How do you play with it?",
+                choices: [
+                    { text: "Train tirelessly in the mud.", effect: () => { state.stats.str++; return "You feel stronger, though covered in dirt."; } },
+                    { text: "Recite epic ballads of knights.", effect: () => { state.stats.cha++; return "You have a natural flair for performance."; } },
+                    { text: "Take it apart to see how it's made.", effect: () => { state.stats.int++; return "You understand the joints and balance now."; } }
+                ]
+            },
+            {
+                title: "Village Fair",
+                text: "A traveling merchant drops a silver coin. No one sees it but you.",
+                choices: [
+                    { text: "Keep it for yourself.", effect: () => { state.gold += 5; state.stats.wis--; return "Your pockets are heavier, but your conscience is not."; } },
+                    { text: "Return it to the merchant.", effect: () => { state.stats.cha += 2; return "The merchant praises your honesty to the village."; } },
+                    { text: "Hide it and wait for a reward.", effect: () => { state.stats.dex++; return "You are becoming quite cunning."; } }
+                ]
+            }
+        ],
+        Youth: [
+            {
+                title: "The Scholar's Invitation",
+                text: "A passing monk notices you reading an old signpost and offers to teach you.",
+                choices: [
+                    { text: "Study the holy texts.", effect: () => { state.stats.int += 2; return "Your mind opens to the wonders of history."; } },
+                    { text: "Politely decline; you prefer work.", effect: () => { state.stats.con++; return "Manual labor hardens your spirit."; } }
+                ]
+            },
+            {
+                title: "A Local Skirmish",
+                text: "Bandits are harassing a neighbor's livestock. What do you do?",
+                choices: [
+                    { text: "Charge in with a pitchfork!", effect: () => { state.stats.str++; state.stats.con++; return "You drove them off, but took a few bruises."; } },
+                    { text: "Track them to their camp.", effect: () => { state.stats.dex++; state.stats.wis++; return "You provided the militia with their location."; } },
+                    { text: "Stay home and lock the doors.", effect: () => { return "Safety is its own reward, if a cowardly one."; } }
+                ]
+            }
+        ],
+        Generic: [
+            {
+                title: "A Quiet Year",
+                text: "The harvest is stable and the weather is fair. How do you spend your free time?",
+                choices: [
+                    { text: "Focus on your health.", effect: () => { state.stats.con++; return "You feel invigorated."; } },
+                    { text: "Socialize at the tavern.", effect: () => { state.stats.cha++; return "You made some new acquaintances."; } },
+                    { text: "Reflect and meditate.", effect: () => { state.stats.wis++; return "You find peace in the chaos of life."; } }
+                ]
+            }
+        ]
     };
 
-    /** INITIALIZATION **/
+    // --- CORE LOGIC ---
     function initCreation() {
         const container = document.getElementById('allocators');
         const labels = { str: "Strength", dex: "Dexterity", con: "Constitution", int: "Intelligence", wis: "Wisdom", cha: "Charisma" };
-        for (let s in gameState.stats) {
+        for (let s in state.stats) {
             const div = document.createElement('div');
             div.className = 'flex justify-between items-center bg-white/30 p-2 mb-1 rounded';
             div.innerHTML = `
-                <span class="font-bold text-sm uppercase">${labels[s]}</span>
+                <span class="font-bold text-[10px] uppercase tracking-wider">${labels[s]}</span>
                 <div class="flex items-center gap-3">
-                    <button class="w-8 h-8 flex items-center justify-center p-0" onclick="changeStat('${s}', -1)">-</button>
-                    <span id="alloc-${s}" class="font-bold w-4">8</span>
-                    <button class="w-8 h-8 flex items-center justify-center p-0" onclick="changeStat('${s}', 1)">+</button>
+                    <button class="w-6 h-6 flex items-center justify-center bg-amber-900 text-white rounded-full text-xs" onclick="changeStat('${s}', -1)">-</button>
+                    <span id="alloc-${s}" class="font-bold w-4 text-sm">8</span>
+                    <button class="w-6 h-6 flex items-center justify-center bg-amber-900 text-white rounded-full text-xs" onclick="changeStat('${s}', 1)">+</button>
                 </div>`;
             container.appendChild(div);
         }
@@ -328,40 +389,39 @@
 
     function checkStartReady() {
         const name = document.getElementById('char-name').value.trim();
-        document.getElementById('start-btn').disabled = !(name && gameState.points === 0);
+        const startBtn = document.getElementById('start-btn');
+        if (name && state.points === 0) {
+            startBtn.disabled = false;
+            startBtn.classList.remove('opacity-50');
+        } else {
+            startBtn.disabled = true;
+            startBtn.classList.add('opacity-50');
+        }
     }
 
     window.changeStat = function(stat, amt) {
-        if (amt > 0 && gameState.points > 0 && gameState.stats[stat] < 18) {
-            gameState.stats[stat]++; gameState.points--;
-        } else if (amt < 0 && gameState.stats[stat] > 8) {
-            gameState.stats[stat]--; gameState.points++;
+        if (amt > 0 && state.points > 0 && state.stats[stat] < 18) {
+            state.stats[stat]++; state.points--;
+        } else if (amt < 0 && state.stats[stat] > 8) {
+            state.stats[stat]--; state.points++;
         }
         updateAllocationUI();
         checkStartReady();
     };
     
     function updateAllocationUI() {
-        for (let s in gameState.stats) {
-            document.getElementById(`alloc-${s}`).innerText = gameState.stats[s];
-        }
-        document.getElementById('points-left').innerText = gameState.points;
+        for (let s in state.stats) document.getElementById(`alloc-${s}`).innerText = state.stats[s];
+        document.getElementById('points-left').innerText = state.points;
     }
 
     window.randomizePoints = function() {
-        // Reset to base 8
-        gameState.points = 20;
-        for (let s in gameState.stats) {
-            gameState.stats[s] = 8;
-        }
-        
-        // Distribute 20 points randomly
-        const keys = Object.keys(gameState.stats);
-        while (gameState.points > 0) {
+        state.points = 20;
+        for (let s in state.stats) state.stats[s] = 8;
+        const keys = Object.keys(state.stats);
+        while (state.points > 0) {
             const stat = keys[Math.floor(Math.random() * keys.length)];
-            if (gameState.stats[stat] < 18) {
-                gameState.stats[stat]++;
-                gameState.points--;
+            if (state.stats[stat] < 18) {
+                state.stats[stat]++; state.points--;
             }
         }
         updateAllocationUI();
@@ -369,148 +429,132 @@
     };
 
     window.setGender = (g) => {
-        gameState.gender = g;
-        // Clean active state from all gender buttons
-        document.querySelectorAll('.gender-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        // Set active on the clicked one (via event source or ID)
+        state.gender = g;
+        document.querySelectorAll('#creation-screen .choice-btn').forEach(btn => btn.classList.remove('active'));
         if (g === 'Male') document.getElementById('gender-m').classList.add('active');
         else if (g === 'Female') document.getElementById('gender-f').classList.add('active');
         else document.getElementById('gender-o').classList.add('active');
-        
         checkStartReady();
     };
 
-    /** GAME START **/
     function startGame() {
-        gameState.firstName = document.getElementById('char-name').value.trim();
-        const roll = Dice.roll(100);
-        gameState.status = roll > 95 ? 'Noble' : roll > 75 ? 'Merchant' : 'Peasant';
-        gameState.rarity = roll > 95 ? 'Legendary' : roll > 75 ? 'Rare' : 'Common';
-        gameState.lastName = Surnames[gameState.status][Math.floor(Math.random() * Surnames[gameState.status].length)];
-        gameState.gold = gameState.status === 'Noble' ? 100 : gameState.status === 'Merchant' ? 40 : 5;
+        state.firstName = document.getElementById('char-name').value.trim();
+        const roll = Math.floor(Math.random() * 100) + 1;
+        state.status = roll > 95 ? 'Noble' : roll > 75 ? 'Merchant' : 'Peasant';
+        state.lastName = Surnames[state.status][Math.floor(Math.random() * Surnames[state.status].length)];
+        state.gold = state.status === 'Noble' ? 100 : state.status === 'Merchant' ? 40 : 5;
         
-        // Initial family
         addRelative('Father', 'Male');
         addRelative('Mother', 'Female');
-        if (Math.random() > 0.5) addRelative('Sibling', Math.random() > 0.5 ? 'Male' : 'Female');
 
         document.getElementById('creation-screen').style.display = 'none';
-        document.getElementById('display-full-name').innerText = `${gameState.firstName} ${gameState.lastName}`;
-        addLogEntry("Birth", `The year is 1200. You are born a ${gameState.status} of the House ${gameState.lastName}. You are a helpless babe, yet the stars shine brightly.`);
+        document.getElementById('display-full-name').innerText = `${state.firstName} ${state.lastName}`;
+        addLogEntry("Birth", `Born into a ${state.status} household. The stars whisper of ${state.firstName}'s destiny.`);
         
         updateUI();
-        nextYear();
+        generateYearlyChoice();
     }
 
-    function addRelative(relation, gender, age = null) {
-        const names = FirstNames[gender];
+    function addRelative(relation, gender) {
         const person = {
             id: Math.random().toString(36).substr(2, 9),
-            name: names[Math.floor(Math.random() * names.length)],
+            name: FirstNames[gender][Math.floor(Math.random() * FirstNames[gender].length)],
             relation: relation,
-            affinity: 50 + Math.floor(Math.random() * 30),
+            affinity: 60 + Math.floor(Math.random() * 20),
             gender: gender,
-            age: age || (relation === 'Sibling' ? Math.floor(Math.random() * 10) : 20 + Math.floor(Math.random() * 20)),
-            isPartner: false
+            age: 20 + Math.floor(Math.random() * 20)
         };
-        gameState.relationships.push(person);
+        state.relationships.push(person);
     }
 
-    /** UI CORE **/
-    function updateUI() {
-        for (let s in gameState.stats) document.getElementById(`stat-${s}`).innerText = gameState.stats[s];
-        document.getElementById('stat-gold').innerText = gameState.gold;
-        document.getElementById('stat-age').innerText = gameState.age;
-        document.getElementById('stat-status').innerText = gameState.status;
-        document.getElementById('year-display').innerText = `Year ${gameState.year}`;
-        document.getElementById('sexuality-display').innerText = gameState.sexPref;
-        
-        const log = document.getElementById('event-log');
-        log.scrollTop = log.scrollHeight;
-        renderRelationships();
-        renderOccupation();
+    function generateYearlyChoice() {
+        let pool = Scenarios.Generic;
+        if (state.age < 12) pool = Scenarios.Childhood;
+        else if (state.age < 20) pool = Scenarios.Youth;
+
+        const scenario = pool[Math.floor(Math.random() * pool.length)];
+        renderScenario(scenario);
     }
 
-    function switchTab(tab) {
-        gameState.currentTab = tab;
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(`${tab}-tab`).classList.remove('hidden');
+    function renderScenario(scenario) {
+        document.getElementById('decision-prompt').innerText = scenario.title;
+        const container = document.getElementById('choices-container');
+        container.innerHTML = `<p class="text-xs italic mb-2">${scenario.text}</p>`;
         
-        // Ensure the clicked element gets the active state
-        const target = event.currentTarget;
-        if (target && target.classList.contains('tab-btn')) {
-            target.classList.add('active');
+        scenario.choices.forEach(c => {
+            const btn = document.createElement('button');
+            btn.className = "choice-btn";
+            btn.innerText = c.text;
+            btn.onclick = () => handleChoice(c);
+            container.appendChild(btn);
+        });
+    }
+
+    function handleChoice(choice) {
+        const resultText = choice.effect();
+        addLogEntry("Choice Made", resultText);
+        processAge();
+    }
+
+    function processAge() {
+        state.age++;
+        state.year++;
+
+        if (state.age === 12) {
+            triggerSexualityChoice();
+            document.getElementById('job-tab-btn').classList.remove('hidden');
         }
+
+        if (state.job) {
+            state.gold += state.job.salary;
+            state.jobPerformance += Math.floor(Math.random() * 10);
+            if (state.jobPerformance > 90) promotePlayer();
+        }
+
+        updateUI();
+        generateYearlyChoice();
     }
 
     function addLogEntry(title, text) {
         const log = document.getElementById('event-log');
         const div = document.createElement('div');
         div.className = 'event-entry';
-        div.innerHTML = `<h4 class="font-bold text-amber-900">${title} (Age ${gameState.age})</h4><p class="text-sm">${text}</p>`;
-        log.appendChild(div);
+        div.innerHTML = `<h4 class="font-bold text-amber-900">${title} (Age ${state.age})</h4><p class="text-sm">${text}</p>`;
+        log.prepend(div); // Newest at top
     }
 
-    /** YEAR LOGIC **/
-    function nextYear() {
-        const choices = document.getElementById('choices-container');
-        choices.innerHTML = `<button onclick="processAge()">Age One Year</button>`;
+    function updateUI() {
+        for (let s in state.stats) document.getElementById(`stat-${s}`).innerText = state.stats[s];
+        document.getElementById('stat-gold').innerText = state.gold;
+        document.getElementById('stat-age').innerText = state.age;
+        document.getElementById('stat-status').innerText = state.status;
+        document.getElementById('year-display').innerText = `Year ${state.year}`;
+        document.getElementById('sexuality-display').innerText = state.sexPref;
+        renderRelationships();
+        renderOccupation();
     }
 
-    function processAge() {
-        gameState.age++;
-        gameState.year++;
-
-        if (gameState.age === 12) {
-            triggerSexualityChoice();
-            document.getElementById('job-tab-btn').classList.remove('hidden');
-        }
-
-        // Job Income
-        if (gameState.job) {
-            gameState.gold += gameState.job.salary;
-            gameState.jobPerformance += Math.floor(Math.random() * 10);
-            if (gameState.jobPerformance > 80) promotePlayer();
-        }
-
-        // Random aging events
-        if (gameState.age < 12) {
-            addLogEntry("Growth", `You are growing healthy. You spend your days playing with wooden toys.`);
-        } else {
-            addLogEntry("Passing Time", `Another year passes in the life of ${gameState.firstName}.`);
-        }
-
-        updateUI();
-        nextYear();
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`${tab}-tab`).classList.remove('hidden');
+        document.getElementById(`tab-${tab}`).classList.add('active');
     }
 
-    function triggerSexualityChoice() {
-        openModal("Coming of Age", "As you enter your twelfth year, you begin to understand your heart's desires. What is your nature?", [
-            { text: "Straight", action: () => { gameState.sexPref = 'Straight'; closeModal(); } },
-            { text: "Bisexual", action: () => { gameState.sexPref = 'Bisexual'; closeModal(); } },
-            { text: "Gay/Lez", action: () => { gameState.sexPref = 'Gay'; closeModal(); } }
-        ]);
-    }
-
-    /** RELATIONSHIP SYSTEM **/
     function renderRelationships() {
         const list = document.getElementById('rel-list');
         list.innerHTML = "";
-        gameState.relationships.forEach(rel => {
+        state.relationships.forEach(rel => {
             const div = document.createElement('div');
-            div.className = "flex justify-between items-center p-3 bg-white/40 border border-black/5 rounded";
+            div.className = "flex justify-between items-center p-2 bg-white/40 border border-black/5 rounded";
             const affinityColor = rel.affinity > 70 ? 'var(--affinity-high)' : rel.affinity < 30 ? 'var(--affinity-low)' : 'var(--gold)';
             div.innerHTML = `
-                <div>
+                <div class="text-xs">
                     <div class="font-bold">${rel.name} (${rel.relation})</div>
-                    <div class="text-xs italic">Age ${rel.age} | ${rel.gender}</div>
                 </div>
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
                     <div class="affinity-bar"><div class="affinity-fill" style="width: ${rel.affinity}%; background: ${affinityColor}"></div></div>
-                    <button class="text-xs px-2 py-1" onclick="openInteraction('${rel.id}')">Interact</button>
+                    <button class="standard" onclick="openInteraction('${rel.id}')">Interact</button>
                 </div>
             `;
             list.appendChild(div);
@@ -518,67 +562,57 @@
     }
 
     function openInteraction(id) {
-        const rel = gameState.relationships.find(r => r.id === id);
+        const rel = state.relationships.find(r => r.id === id);
         const actions = [
-            { text: "Spend Time", action: () => adjustAffinity(id, 5, "You spent a lovely afternoon together.") },
-            { text: "Give Gift (5 Gold)", action: () => { 
-                if(gameState.gold >= 5) { gameState.gold -= 5; adjustAffinity(id, 15, "They loved the handmade trinket!"); }
-                else addLogEntry("Poor", "You have no gold for gifts.");
-                closeModal();
+            { text: "Spend Time Together", action: () => adjustAffinity(id, 5, `You shared stories with ${rel.name}.`) },
+            { text: "Give a Small Gift (3 Gold)", action: () => { 
+                if(state.gold >= 3) { state.gold -= 3; adjustAffinity(id, 12, `${rel.name} is delighted with the gift!`); }
+                else { closeModal(); addLogEntry("Poor", "You don't have enough gold."); }
             }},
-            { text: "Insult", action: () => adjustAffinity(id, -20, "You said something cruel. They are hurt.") }
+            { text: "Borrow Money (1 Gold)", action: () => {
+                if(rel.affinity > 50) { state.gold += 1; adjustAffinity(id, -5, `${rel.name} sighs and hands you a coin.`); }
+                else { closeModal(); addLogEntry("Refusal", `${rel.name} refuses to lend you anything.`); }
+            }}
         ];
-
-        if (gameState.age >= 12 && !rel.isPartner && !['Father', 'Mother', 'Sibling'].includes(rel.relation)) {
-            actions.push({ text: "Ask Out", action: () => attemptRomance(id) });
-        }
-
-        openModal(`Interact with ${rel.name}`, "How shall you treat them?", actions);
+        openModal(`Talk to ${rel.name}`, `Affinity: ${rel.affinity}%`, actions);
     }
 
     function adjustAffinity(id, amt, msg) {
-        const rel = gameState.relationships.find(r => r.id === id);
+        const rel = state.relationships.find(r => r.id === id);
         rel.affinity = Math.min(100, Math.max(0, rel.affinity + amt));
         addLogEntry("Relationship", msg);
         updateUI();
         closeModal();
     }
 
-    function attemptRomance(id) {
-        const rel = gameState.relationships.find(r => r.id === id);
-        if (rel.affinity > 60) {
-            rel.relation = "Partner";
-            rel.isPartner = true;
-            addLogEntry("Romance", `You and ${rel.name} are now dating!`);
-        } else {
-            rel.affinity -= 10;
-            addLogEntry("Rejection", `${rel.name} isn't interested in you that way.`);
-        }
-        updateUI();
-        closeModal();
+    function triggerSexualityChoice() {
+        openModal("Coming of Age", "As you enter your youth, your heart begins to flutter. Who do you find yourself watching?", [
+            { text: "The opposite sex", action: () => { state.sexPref = 'Straight'; closeModal(); } },
+            { text: "Both sexes", action: () => { state.sexPref = 'Bisexual'; closeModal(); } },
+            { text: "The same sex", action: () => { state.sexPref = 'Gay'; closeModal(); } }
+        ]);
     }
 
-    /** OCCUPATION SYSTEM **/
     function renderOccupation() {
         const info = document.getElementById('job-info');
         const offers = document.getElementById('job-offers');
         offers.innerHTML = "";
 
-        if (gameState.job) {
+        if (state.job) {
             info.innerHTML = `
-                <div class="p-4 bg-white/50 rounded border-l-4 border-green-800">
-                    <div class="font-bold text-xl">${gameState.job.name}</div>
-                    <div class="text-sm">Salary: ${gameState.job.salary} Gold/Year</div>
-                    <div class="text-sm mt-1">Performance: ${gameState.jobPerformance}%</div>
-                    <button class="mt-2 bg-red-800 text-xs" onclick="quitJob()">Resign</button>
+                <div class="p-4 bg-white/50 rounded border-l-4 border-amber-900">
+                    <div class="font-bold text-lg">${state.job.name}</div>
+                    <div class="text-xs">Annual Income: ${state.job.salary} Gold</div>
+                    <div class="text-xs mt-1">Performance: ${state.jobPerformance}%</div>
+                    <button class="mt-4 bg-red-900 text-white px-3 py-1 text-xs" onclick="quitJob()">Resign</button>
                 </div>
             `;
-        } else if (gameState.age >= 12) {
-            info.innerHTML = "<p>You are looking for work...</p>";
+        } else if (state.age >= 12) {
+            info.innerHTML = "<p class='text-sm italic mb-4'>You are currently seeking a trade.</p>";
             Jobs.forEach(job => {
                 const btn = document.createElement('button');
-                btn.className = "w-full text-left p-2 mb-2 bg-white/30 border border-black/10 flex justify-between";
-                btn.innerHTML = `<span>${job.name}</span> <span class="text-xs">Salary: ${job.salary}</span>`;
+                btn.className = "choice-btn text-xs";
+                btn.innerHTML = `Join ${job.name} <span class="opacity-70 float-right">Sal: ${job.salary}</span>`;
                 btn.onclick = () => applyForJob(job);
                 offers.appendChild(btn);
             });
@@ -586,29 +620,33 @@
     }
 
     function applyForJob(job) {
-        let meetReqs = true;
-        for (let r in job.req) {
-            if (gameState.stats[r] < job.req[r]) meetReqs = false;
-        }
+        let passes = true;
+        for (let r in job.req) if (state.stats[r] < job.req[r]) passes = false;
 
-        if (meetReqs) {
-            gameState.job = job;
-            gameState.jobPerformance = 50;
-            addLogEntry("Employment", `You were hired as a ${job.name}.`);
+        if (passes) {
+            state.job = job;
+            state.jobPerformance = 50;
+            addLogEntry("Work", `Appointed as ${job.name}.`);
         } else {
-            addLogEntry("Job Search", `You were rejected for the position of ${job.name}.`);
+            addLogEntry("Rejection", `The master of the trade deemed you unfit for ${job.name}.`);
         }
         updateUI();
     }
 
-    function promotePlayer() {
-        const current = gameState.job;
-        addLogEntry("Promotion", `Hard work pays off! You have been promoted to ${current.promo}.`);
-        gameState.job = { ...current, name: current.promo, salary: current.salary + 5 };
-        gameState.jobPerformance = 40;
+    function quitJob() {
+        state.job = null;
+        state.jobPerformance = 0;
+        addLogEntry("Work", "You have left your post.");
+        updateUI();
     }
 
-    /** MODAL HELPERS **/
+    function promotePlayer() {
+        const current = state.job;
+        addLogEntry("Glory", `For your excellence, you are promoted to ${current.promo}!`);
+        state.job = { ...current, name: current.promo, salary: current.salary + 5 };
+        state.jobPerformance = 30;
+    }
+
     function openModal(title, text, actions) {
         document.getElementById('modal-title').innerText = title;
         document.getElementById('modal-text').innerText = text;
@@ -616,6 +654,7 @@
         container.innerHTML = "";
         actions.forEach(a => {
             const b = document.createElement('button');
+            b.className = "choice-btn text-center text-sm";
             b.innerText = a.text;
             b.onclick = a.action;
             container.appendChild(b);
