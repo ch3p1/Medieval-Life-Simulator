@@ -893,6 +893,7 @@
         traits: [],
         inventory: [],
         eventQueue: [], // NEW: Stores events for the current year
+        recentEvents: [], // NEW: Duplicate Ward memory
         flags: {
             literate: false,
             criminal: false,
@@ -1436,9 +1437,11 @@
             const dad = tryAddParent("Father", "Male", "Peasant", locIndex, fatherAge);
             const mom = tryAddParent("Mother", "Female", "Peasant", locIndex, motherAge);
             
-            if(Math.random() > 0.3) {
+            // SIBLING GENERATION (0-3)
+            const numSiblings = Math.floor(Math.random() * 4);
+            for(let i=0; i < numSiblings; i++) {
                 const gen = Math.random() > 0.5 ? 'Male' : 'Female';
-                const sibAge = Math.floor(Math.random() * 10) + 1;
+                const sibAge = Math.max(1, Math.floor(Math.random() * 15));
                 addRelationship(getRandomName(gen), "Sibling", 50, gen, "Peasant", locIndex, true, true, sibAge);
             }
             return;
@@ -1506,9 +1509,22 @@
         const mother = addRelationship(getRandomName('Female'), "Mother", 80, "Female", "Lady", locIndex, false, true, motherAge);
         addHouseMember(mother.name, 'Female', 'Lady', locIndex, mother.id);
 
+        // UNCLE/AUNT GENERATION (0-2)
+        const numUncles = Math.floor(Math.random() * 3);
+        for(let i=0; i < numUncles; i++) {
+            const isUncle = Math.random() > 0.5;
+            const uaGen = isUncle ? 'Male' : 'Female';
+            const uaRel = isUncle ? 'Uncle' : 'Aunt';
+            const uaAge = fatherAge + Math.floor(Math.random() * 10) - 5;
+            const ua = addRelationship(getRandomName(uaGen), uaRel, 50, uaGen, "House Member", locIndex, true, true, uaAge);
+            addHouseMember(ua.name, ua.gender, "House Member", locIndex, ua.id);
+        }
+
         addHouseMember(state.name, state.gender, rank, state.location, "PLAYER"); 
         
-        if (Math.random() > 0.3) {
+        // SIBLING GENERATION (0-3)
+        const numSiblings = Math.floor(Math.random() * 4);
+        for(let i=0; i < numSiblings; i++) {
             const sibGender = Math.random() > 0.5 ? 'Male' : 'Female';
             const sibAge = Math.floor(Math.random() * 10) + 1;
             const sib = addRelationship(getRandomName(sibGender), "Sibling", 80, sibGender, "House Member", state.location, true, true, sibAge);
@@ -1928,8 +1944,17 @@
             const jeoEvt = POOLS.Jeopardy[Math.floor(Math.random() * (POOLS.Jeopardy.length - 1))];
             state.eventQueue.push(jeoEvt);
         } else {
-            const validEvents = pool.filter(e => true); 
-            const ageEvt = validEvents[Math.floor(Math.random() * validEvents.length)];
+            // DUPLICATE WARD LOGIC
+            const validEvents = pool.filter(e => !state.recentEvents.includes(e.id));
+            // If we run out of fresh events, reset to full pool
+            const finalPool = validEvents.length > 0 ? validEvents : pool;
+            
+            const ageEvt = finalPool[Math.floor(Math.random() * finalPool.length)];
+            
+            // Remember this event
+            state.recentEvents.push(ageEvt.id);
+            if(state.recentEvents.length > 8) state.recentEvents.shift(); // Keep last 8 unique
+
             state.eventQueue.push(ageEvt);
         }
 
