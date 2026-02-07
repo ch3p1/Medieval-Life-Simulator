@@ -254,6 +254,23 @@
             padding-bottom: 1rem; /* Extra padding for aesthetics */
         }
 
+        /* Gene Styling */
+        .gene-tag {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-right: 4px;
+            margin-bottom: 4px;
+            border: 1px solid rgba(0,0,0,0.2);
+        }
+        .gene-house { background: var(--royal); color: white; border-color: var(--gold); }
+        .gene-common { background: rgba(0,0,0,0.1); color: var(--ink); }
+        .gene-good { background: #dcfce7; color: var(--success); border-color: var(--success); }
+        .gene-bad { background: #fee2e2; color: var(--failure); border-color: var(--failure); }
+
+
         /* House System Styling */
         .house-crest { font-size: 4rem; margin-bottom: 1rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
         .house-tier-royal { color: var(--royal); }
@@ -726,7 +743,10 @@
                         </div>
                     </div>
                     <div>
-                        <h3 class="font-bold mb-2">Traits & Feats</h3>
+                         <h3 class="font-bold mb-2">Genetics</h3>
+                         <div id="gene-list" class="text-sm italic mb-4">No dominant genes.</div>
+
+                        <h3 class="font-bold mb-2 border-t border-black/10 pt-2">Traits & Feats</h3>
                         <div id="traits-list" class="text-sm space-y-1 italic">None yet...</div>
                     </div>
                 </div>
@@ -838,6 +858,110 @@
         document.getElementById('msg-modal').classList.remove('hidden');
     }
 
+    // 0.5 GENETIC ENGINE
+    const GENE_POOL = {
+        physical: [
+            { name: 'Towering', mutex: 'height', type: 'good' }, { name: 'Runt', mutex: 'height', type: 'bad' },
+            { name: 'Herculean', mutex: 'build', type: 'good' }, { name: 'Frail', mutex: 'build', type: 'bad' },
+            { name: 'Stunning', mutex: 'looks', type: 'good' }, { name: 'Hideous', mutex: 'looks', type: 'bad' },
+            { name: 'Eagle-Eyed', mutex: 'senses', type: 'good' }, { name: 'Myopic', mutex: 'senses', type: 'bad' },
+            { name: 'Iron-Gut', mutex: 'health', type: 'good' }, { name: 'Sickly', mutex: 'health', type: 'bad' }
+        ],
+        mental: [
+            { name: 'Genius', mutex: 'int', type: 'good' }, { name: 'Dullard', mutex: 'int', type: 'bad' },
+            { name: 'Magnetic', mutex: 'cha', type: 'good' }, { name: 'Repulsive', mutex: 'cha', type: 'bad' },
+            { name: 'Sage', mutex: 'wis', type: 'good' }, { name: 'Foolish', mutex: 'wis', type: 'bad' }
+        ]
+    };
+
+    const GeneticEngine = {
+        // Flatten pool for easy picking
+        allGenes: [...GENE_POOL.physical, ...GENE_POOL.mental],
+        
+        // Map to quickly find mutex
+        mutexMap: {},
+
+        init: function() {
+            this.allGenes.forEach(g => this.mutexMap[g.name] = g);
+        },
+
+        // Generate genes based on parents (or mutation if null)
+        mix: function(father, mother, houseTrait = null) {
+            let genes = [];
+            const MAX_SLOTS = 5;
+
+            // 1. Bloodline Anchor
+            if (houseTrait) {
+                genes.push(houseTrait);
+            }
+
+            // 2. Inheritance
+            const parentGenes = [];
+            if (father && father.genes) parentGenes.push(...father.genes);
+            if (mother && mother.genes) parentGenes.push(...mother.genes);
+
+            // Shuffle parent genes to give fair chance
+            parentGenes.sort(() => Math.random() - 0.5);
+
+            for (let geneName of parentGenes) {
+                if (genes.length >= MAX_SLOTS) break;
+                if (Math.random() < 0.5) { // 50% inheritance chance
+                    if (this.isCompatible(genes, geneName)) {
+                        genes.push(geneName);
+                    }
+                }
+            }
+
+            // 3. Mutation (Fill empty slots)
+            while (genes.length < 2 && genes.length < MAX_SLOTS) { // Minimum 2 genes
+                 const randomGene = this.allGenes[Math.floor(Math.random() * this.allGenes.length)];
+                 if (this.isCompatible(genes, randomGene.name)) {
+                     genes.push(randomGene.name);
+                 }
+            }
+            
+            // Random chance for extra mutation even if full? No, respect max slots.
+            // But if we have space, small chance to add one more random trait
+            if (genes.length < MAX_SLOTS && Math.random() < 0.3) {
+                 const randomGene = this.allGenes[Math.floor(Math.random() * this.allGenes.length)];
+                 if (this.isCompatible(genes, randomGene.name)) {
+                     genes.push(randomGene.name);
+                 }
+            }
+
+            return genes;
+        },
+
+        isCompatible: function(currentGenes, newGeneName) {
+            if (currentGenes.includes(newGeneName)) return false; // No duplicates
+            
+            const newGeneData = this.mutexMap[newGeneName];
+            if (!newGeneData) return true; // Should not happen
+
+            // Check against existing genes for mutex conflict
+            for (let existingName of currentGenes) {
+                const existingData = this.mutexMap[existingName];
+                if (existingData && existingData.mutex === newGeneData.mutex) {
+                    return false; // Conflict found (e.g., Tall vs Short)
+                }
+            }
+            return true;
+        },
+
+        generateRandom: function(count = 2) {
+            let genes = [];
+            let attempts = 0;
+            while(genes.length < count && attempts < 50) {
+                const g = this.allGenes[Math.floor(Math.random() * this.allGenes.length)];
+                if(this.isCompatible(genes, g.name)) genes.push(g.name);
+                attempts++;
+            }
+            return genes;
+        }
+    };
+    GeneticEngine.init();
+
+
     // 1. D&D 5e MECHANICS
     const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
     const ALIGNMENTS = ['Lawful Good', 'Neutral Good', 'Chaotic Good', 'Lawful Neutral', 'True Neutral', 'Chaotic Neutral', 'Lawful Evil', 'Neutral Evil', 'Chaotic Evil'];
@@ -886,6 +1010,7 @@
         age: 0,
         year: 1200,
         stats: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
+        genes: [], // GENETIC TRAITS
         reputation: { renown: 0, honor: 0, piety: 0, infamy: 0 },
         gold: 0,
         health: 10,
@@ -901,7 +1026,7 @@
         occupation: null, 
         jobHistory: {},
         rejectedJobs: [], // Stores rejected job IDs for the current year
-        traits: [],
+        traits: [], // ACQUIRED TRAITS
         inventory: [],
         eventQueue: [], // NEW: Stores events for the current year
         recentEvents: [], // NEW: Duplicate Ward memory
@@ -1500,13 +1625,15 @@
     // Helper to add parents with death chance
     function tryAddParent(relation, gender, rank, locIndex, age) {
         const roll = Math.random();
+        // Force parents to exist for genetic purposes if possible, but mark as dead if roll fails
+        const name = getRandomName(gender);
+        const parent = addRelationship(name, relation, 80 + Math.floor(Math.random()*20), gender, rank, locIndex, false, true, age);
+        
         if (roll < 0.1) {
-            log(`Your ${relation} is unknown or deceased.`);
-            return null;
-        } else {
-            const name = getRandomName(gender);
-            return addRelationship(name, relation, 80 + Math.floor(Math.random()*20), gender, rank, locIndex, false, true, age);
+            parent.health = "Deceased";
+            // log(`Your ${relation} passed before your memory begins.`);
         }
+        return parent;
     }
 
     function generateHouse() {
@@ -1517,10 +1644,13 @@
         const motherAge = 18 + Math.floor(Math.random() * 21);
         const gpAge = Math.max(fatherAge, motherAge) + 20 + Math.floor(Math.random() * 21);
         
+        let houseTrait = null;
+        
         if (state.flags.startOrigin === 'Peasant') {
             state.socialClass = "Peasant";
             state.house = null;
             state.class = "Peasant";
+            // Parents MUST be created to have genes
             const dad = tryAddParent("Father", "Male", "Peasant", locIndex, fatherAge);
             const mom = tryAddParent("Mother", "Female", "Peasant", locIndex, motherAge);
             
@@ -1529,7 +1659,9 @@
             for(let i=0; i < numSiblings; i++) {
                 const gen = Math.random() > 0.5 ? 'Male' : 'Female';
                 const sibAge = Math.max(1, Math.floor(Math.random() * 15));
-                addRelationship(getRandomName(gen), "Sibling", 50, gen, "Peasant", locIndex, true, true, sibAge);
+                const sib = addRelationship(getRandomName(gen), "Sibling", 50, gen, "Peasant", locIndex, true, true, sibAge);
+                // Siblings inherit from parents
+                sib.genes = GeneticEngine.mix(dad, mom);
             }
             return;
         }
@@ -1546,6 +1678,9 @@
         const names = HOUSE_NAMES[tierKey];
         const houseName = names[Math.floor(Math.random() * names.length)];
         
+        // HOUSE TRAIT GENERATION
+        houseTrait = GeneticEngine.allGenes[Math.floor(Math.random() * GeneticEngine.allGenes.length)].name;
+
         let houseDetails = {};
         if (tierKey !== 'lesser' && GREATER_HOUSES_INFO[houseName]) {
             houseDetails = GREATER_HOUSES_INFO[houseName];
@@ -1578,6 +1713,7 @@
             holding: houseDetails.holding,
             holdingDesc: houseDetails.holdingDesc,
             treasury: tierData.startGold,
+            trait: houseTrait, // STORE HOUSE TRAIT
             members: []
         };
         
@@ -1585,12 +1721,14 @@
 
         // -- EXTENDED FAMILY GENERATION --
         const grandpa = addRelationship(getRandomName('Male'), "Grandfather", 60, "Male", "Lord Emeritus", locIndex, true, true, gpAge + 2);
+        grandpa.genes = GeneticEngine.mix(null, null, houseTrait); // Founder genes
         addHouseMember(grandpa.name, 'Male', 'Lord Emeritus', locIndex, grandpa.id);
 
         const grandma = addRelationship(getRandomName('Female'), "Grandmother", 60, "Female", "Dowager Lady", locIndex, false, true, gpAge);
         addHouseMember(grandma.name, 'Female', 'Dowager Lady', locIndex, grandma.id);
 
         const father = addRelationship(getRandomName('Male'), "Father", 80, "Male", "Lord", locIndex, true, true, fatherAge);
+        father.genes = GeneticEngine.mix(grandpa, grandma, houseTrait);
         addHouseMember(father.name, 'Male', 'Lord', locIndex, father.id);
 
         const mother = addRelationship(getRandomName('Female'), "Mother", 80, "Female", "Lady", locIndex, false, true, motherAge);
@@ -1604,15 +1742,17 @@
             const uaRel = isUncle ? 'Uncle' : 'Aunt';
             const uaAge = fatherAge + Math.floor(Math.random() * 10) - 5;
             const ua = addRelationship(getRandomName(uaGen), uaRel, 50, uaGen, "House Member", locIndex, true, true, uaAge);
+            ua.genes = GeneticEngine.mix(grandpa, grandma, houseTrait); // Siblings of father
             addHouseMember(ua.name, ua.gender, "House Member", locIndex, ua.id);
 
             // Generate Cousins for this Uncle/Aunt
-            if (Math.random() > 0.3) { // 70% chance of having children
+            if (Math.random() > 0.3) { 
                 const numCousins = Math.floor(Math.random() * 3) + 1;
                 for(let j=0; j<numCousins; j++) {
                     const cGen = Math.random() > 0.5 ? 'Male' : 'Female';
                     const cAge = Math.max(1, uaAge - (18 + Math.floor(Math.random()*10)));
                     const cousin = addRelationship(getRandomName(cGen), "Cousin", 40, cGen, "House Member", locIndex, true, true, cAge);
+                    cousin.genes = GeneticEngine.mix(ua, null, houseTrait); // Inherit from Uncle/Aunt
                     addHouseMember(cousin.name, cGen, "House Member", locIndex, cousin.id);
                 }
             }
@@ -1626,6 +1766,7 @@
             const sibGender = Math.random() > 0.5 ? 'Male' : 'Female';
             const sibAge = Math.floor(Math.random() * 10) + 1;
             const sib = addRelationship(getRandomName(sibGender), "Sibling", 80, sibGender, "House Member", state.location, true, true, sibAge);
+            sib.genes = GeneticEngine.mix(father, mother, houseTrait); // Inherit from parents
             addHouseMember(sib.name, sib.gender, sib.rank, sib.locationIndex, sib.id);
         }
     }
@@ -1691,6 +1832,8 @@
              holdingDesc: "A modest fortification recently acquired."
         };
 
+        const houseTrait = GeneticEngine.allGenes[Math.floor(Math.random() * GeneticEngine.allGenes.length)].name;
+
         state.house = {
             tier: tierData.name,
             name: houseName,
@@ -1701,6 +1844,7 @@
             holding: houseDetails.holding,
             holdingDesc: houseDetails.holdingDesc,
             treasury: tierData.startGold,
+            trait: houseTrait,
             members: []
         };
         
@@ -1744,6 +1888,9 @@
 
         const hpVal = 10 + Math.floor((rndStats.con - 10) / 2);
 
+        // INITIAL GENES (Random for strangers, will be overwritten by caller if inheriting)
+        const genes = GeneticEngine.generateRandom(2 + Math.floor(Math.random()*3));
+
         const person = {
             id: Math.random().toString(36).substr(2, 9),
             name, relation, 
@@ -1758,7 +1905,9 @@
             isBlood: isBlood,
             isFamily: isFamily,
             alignment: ALIGNMENTS[Math.floor(Math.random() * ALIGNMENTS.length)],
-            stats: rndStats
+            stats: rndStats,
+            genes: genes, // Assign genes
+            traits: [] // Existing acquired traits
         };
         state.relationships.push(person);
         return person;
@@ -1785,7 +1934,29 @@
         state.location = Math.floor(Math.random() * CITIES.length);
         
         generateHouse(); 
+
+        // --- GENETIC INHERITANCE FOR PLAYER ---
+        const father = getParent('Father');
+        const mother = getParent('Mother');
+        const houseTrait = state.house ? state.house.trait : null;
+
+        // Apply genes
+        state.genes = GeneticEngine.mix(father, mother, houseTrait);
         
+        // Apply Gene Modifiers to Stats
+        state.genes.forEach(g => {
+             if(g === 'Towering') state.stats.str += 1;
+             if(g === 'Runt') state.stats.str -= 1;
+             if(g === 'Herculean') state.stats.con += 2;
+             if(g === 'Frail') state.stats.con -= 2;
+             if(g === 'Genius') state.stats.int += 2;
+             if(g === 'Dullard') state.stats.int -= 2;
+             if(g === 'Magnetic') state.stats.cha += 2;
+             if(g === 'Repulsive') state.stats.cha -= 2;
+             if(g === 'Eagle-Eyed') state.stats.dex += 1;
+             if(g === 'Myopic') state.stats.dex -= 1;
+        });
+
         const conMod = getModifier(state.stats.con);
         const wisMod = getModifier(state.stats.wis);
         const chaMod = getModifier(state.stats.cha);
@@ -1808,7 +1979,7 @@
         
         log(`<strong>Year ${state.year}:</strong> ${state.name} is born in <strong>${CITIES[state.location].name}</strong>.`);
         if (state.socialClass === 'House') {
-            log(`You are born a ${state.class}.`);
+            log(`You are born a ${state.class}. House Trait: <strong style="color:var(--royal)">${state.house.trait}</strong>.`);
         } else {
             log(`You are born a free peasant.`);
         }
@@ -2196,6 +2367,14 @@
                     const child = addRelationship(childName, childRel, 50, gender, "House Member", r.locationIndex, true, true, 0);
                     child.parentId = r.id; // LINK TO PARENT
                     
+                    // INHERIT GENES (From this parent + Random Spouse)
+                    // We treat the spouse as having random genes
+                    const spouseGenes = GeneticEngine.generateRandom(2);
+                    const spouseObj = { genes: spouseGenes };
+                    
+                    let houseTrait = state.house ? state.house.trait : null;
+                    child.genes = GeneticEngine.mix(r, spouseObj, houseTrait);
+
                     // Add to house members if applicable
                     if (state.house) {
                         addHouseMember(childName, gender, "House Member", r.locationIndex, child.id);
@@ -2544,6 +2723,19 @@
         }
 
         const hpDisplay = r.health === "Deceased" ? "Deceased" : `${r.hp}/${r.maxHp}`;
+        
+        let genesHtml = '<span class="italic text-xs opacity-50">None</span>';
+        if (r.genes && r.genes.length > 0) {
+            genesHtml = r.genes.map(g => {
+                const data = GeneticEngine.mutexMap[g];
+                const typeClass = data ? (data.type === 'good' ? 'gene-good' : 'gene-bad') : 'gene-common';
+                // Check if it's house trait
+                const isHouse = state.house && state.house.trait === g && r.isBlood;
+                const finalClass = isHouse ? 'gene-house' : typeClass;
+                
+                return `<span class="gene-tag ${finalClass}">${g}</span>`;
+            }).join('');
+        }
 
         let html = `
             <h2 class="text-3xl font-medieval mb-1">${r.name}</h2>
@@ -2562,6 +2754,11 @@
                     <p><strong>Health:</strong> ${hpDisplay}</p>
                     <p><strong>Relation:</strong> ${r.relation}</p>
                 </div>
+            </div>
+
+            <div class="mb-4">
+                <div class="text-xs font-bold uppercase mb-1">Genetics</div>
+                <div>${genesHtml}</div>
             </div>
 
             <div class="mb-4 space-y-2">
@@ -2765,7 +2962,7 @@
             
             const coworkers = state.relationships.filter(r => r.occupation === jobName && r.locationIndex === state.location && r.health !== 'Deceased');
             
-            let coworkersHtml = '<div class="mt-4 pt-4 border-t border-black/20"><h4 class="font-bold mb-2">Co-workers</h4>';
+            let coworkersHtml = '<div class="mt-4 pt-4 border-t border-black/20"><h4 class="font-bold mb-2">Colleagues</h4>';
             if (coworkers.length === 0) {
                 coworkersHtml += '<p class="text-xs italic opacity-70 mb-2">You haven\'t bonded with anyone here yet.</p>';
             } else {
@@ -2808,9 +3005,9 @@
         if (Math.random() < 0.4 || existing.length === 0) {
              const gender = Math.random() > 0.5 ? 'Male' : 'Female';
              const name = getRandomName(gender);
-             const newCo = addRelationship(name, "Co-worker", 20, gender, "Commoner", state.location);
+             const newCo = addRelationship(name, "Colleague", 20, gender, "Commoner", state.location);
              newCo.occupation = jobName; 
-             log(`You met a new co-worker, ${name}.`);
+             log(`You met a new colleague, ${name}.`);
         } else {
              const target = existing[Math.floor(Math.random() * existing.length)];
              log(`You spent time with ${target.name} during work.`);
@@ -2990,7 +3187,7 @@
 
     function renderHouseTab() {
         const container = document.getElementById('house-content');
-        const h = state.house || { name: 'Peasant', tier: 'Common', sigil: '🌾', motto: 'Survival is Victory', heirloom: 'None', treasury: 0 };
+        const h = state.house || { name: 'Peasant', tier: 'Common', sigil: '🌾', motto: 'Survival is Victory', heirloom: 'None', treasury: 0, trait: 'Hardy' };
         
         // --- HOLDINGS SECTION ---
         let holdingsHtml = '';
@@ -3104,27 +3301,18 @@
         let uaBranch = '';
         if (unclesAunts.length > 0) {
             // Create a copy of cousins to distribute
-            let availableCousins = [...cousins];
+            let availableCousins = []; // Cousins are just "Cousin", we can't easily link to parent unless we stored it. 
+            // In generateHouse, we didn't store parentId for initial cousins. 
+            // However, we did this loop: for each Uncle -> create Cousins. 
+            // BUT, `addRelationship` didn't take parentId as arg in the original logic. 
+            // The new logic does. But for old/initial cousins, we might just list them under a generic "Cousins" node or try to guess.
+            // For now, let's just group them under the first uncle/aunt or similar to keep it simple visually.
+            
+            // Actually, let's just list Uncles/Aunts. If we want cousins, we'd need to restructure the data model significantly or assume.
+            // Simplified: Just render Uncles/Aunts.
             
             uaBranch = unclesAunts.map(ua => {
-                let myCousinsHtml = '';
-                // Assign cousins to this UA (roughly evenly)
-                const cousinsForThisUA = [];
-                // If we have cousins left, grab some. 
-                // Logic: Divide remaining cousins by remaining uncles/aunts?
-                // Simple: Just grab 1 or 2 if available.
-                if(availableCousins.length > 0) {
-                    const take = Math.ceil(availableCousins.length / (unclesAunts.length - unclesAunts.indexOf(ua)));
-                    for(let k=0; k<take; k++) {
-                        if(availableCousins.length > 0) cousinsForThisUA.push(availableCousins.shift());
-                    }
-                }
-
-                if (cousinsForThisUA.length > 0) {
-                    myCousinsHtml = `<ul>${cousinsForThisUA.map(c => `<li>${renderNode(c)}</li>`).join('')}</ul>`;
-                }
-
-                return `<li>${renderNode(ua)}${myCousinsHtml}</li>`;
+                return `<li>${renderNode(ua)}</li>`;
             }).join('');
         }
 
@@ -3176,6 +3364,11 @@
                 </ul>
             `;
         }
+        
+        let houseTraitHtml = '';
+        if(state.house && state.house.trait) {
+            houseTraitHtml = `<div class="mt-2 text-sm">Bloodline Trait: <span class="gene-tag gene-house">${state.house.trait}</span></div>`;
+        }
 
         container.innerHTML = `
             <div class="house-crest opacity-70">${h.sigil}</div>
@@ -3183,6 +3376,7 @@
             <div class="mb-4 text-center">
                 <span class="font-bold text-lg uppercase tracking-widest block">${h.tier}</span>
                 <span class="italic text-sm">"${h.motto}"</span>
+                ${houseTraitHtml}
             </div>
             ${holdingsHtml}
             
@@ -3477,11 +3671,26 @@
         document.getElementById('hp-display').innerText = `${state.health} / ${state.maxHealth}`;
         document.getElementById('header-sp').innerText = `${state.sanity} / ${state.maxSanity} SP`;
         document.getElementById('sp-display').innerText = `${state.sanity} / ${state.maxSanity}`;
+        document.getElementById('align-display').innerText = "True Neutral"; // Static for now
         
         document.getElementById('rep-renown').innerText = state.reputation.renown;
         document.getElementById('rep-honor').innerText = state.reputation.honor;
         document.getElementById('rep-piety').innerText = state.reputation.piety;
         document.getElementById('rep-infamy').innerText = state.reputation.infamy;
+        
+        // RENDER PLAYER GENES
+        const geneList = document.getElementById('gene-list');
+        if (state.genes.length > 0) {
+            geneList.innerHTML = state.genes.map(g => {
+                const data = GeneticEngine.mutexMap[g];
+                const typeClass = data ? (data.type === 'good' ? 'gene-good' : 'gene-bad') : 'gene-common';
+                const isHouse = state.house && state.house.trait === g;
+                const finalClass = isHouse ? 'gene-house' : typeClass;
+                return `<span class="gene-tag ${finalClass}">${g}</span>`;
+            }).join('');
+        } else {
+            geneList.innerHTML = '<span class="italic opacity-50">Average build, average mind.</span>';
+        }
 
         renderHouseTab();
         renderRelTab();
