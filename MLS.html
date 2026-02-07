@@ -866,7 +866,8 @@
             startOrigin: 'Peasant',
             travelAllowed: false,
             travelTarget: null,
-            adult: false
+            adult: false,
+            traveledThisYear: false
         }
     };
 
@@ -1915,6 +1916,7 @@
         state.interactions = {}; 
         state.activityLog = { love: 0, quest: 0, crime: 0, train: 0, lord: 0 }; 
         state.flags.travelAllowed = false; 
+        state.flags.traveledThisYear = false;
         state.eventQueue = []; // Clear queue
 
         // Revamped HP: Always 10 + CON Mod (Dynamic)
@@ -2112,8 +2114,8 @@
         `;
         
         const items = [
-            {name: 'Bread', type: 'Common', desc: 'Restores 2 HP', value: 2, effect: () => { state.health += 2; }},
-            {name: 'Healing Potion', type: 'Uncommon', desc: 'Restores 10 HP', value: 25, effect: () => { state.health += 10; }},
+            {name: 'Bread', type: 'Consumable', desc: 'Restores 2 HP', value: 2},
+            {name: 'Healing Potion', type: 'Consumable', desc: 'Restores 10 HP', value: 25},
             {name: 'Rope', type: 'Common', desc: 'Good for climbing.', value: 5},
             {name: 'Iron Sword', type: 'Uncommon', desc: 'A sturdy blade.', value: 30},
             {name: 'Torch', type: 'Common', desc: 'Lights the way.', value: 1}
@@ -2152,6 +2154,13 @@
         if(!checkAge(10)) return;
         // AudioEngine.pulse(); // Removed manual calls, handled globally
         state.activityLog.lord++;
+
+        if (state.reputation.renown < 50) {
+            log(`<strong class="text-red-800">Denied.</strong> The guards block your path. "The Lord only grants audiences to those of name (50 Renown)."`);
+            switchTab('log');
+            return;
+        }
+
         const city = CITIES[state.location];
         const rulerName = city.ruler;
         log(`You attempt to gain audience with the ruling family of ${rulerName}.`);
@@ -2229,6 +2238,9 @@
 
     function actCrime() {
         if(!checkAge(8)) return;
+        // CONFIRMATION ADDED HERE
+        if (!confirm("This is an evil act? Are you sure?")) return;
+
         // AudioEngine.pulse();
         state.activityLog.crime++;
         const pool = POOLS.Crime;
@@ -2270,12 +2282,18 @@
             
             const currentCity = CITIES[state.location];
             const dist = Math.sqrt(Math.pow(city.x - currentCity.x, 2) + Math.pow(city.y - currentCity.y, 2));
-            const travelTime = Math.ceil(dist / 5); 
+            const travelTime = Math.min(10, Math.ceil(dist / 5)); 
             const cost = travelTime * 5; // 5 gold per month
             const timeText = travelTime === 0 ? "" : `(${travelTime} Mo, ${cost}g)`;
 
-            const action = isHere ? `<span class="text-xs font-bold text-amber-900">Current Location</span>` : 
-                `<button onclick="attemptTravel(${index})" class="text-xs bg-leather text-white px-2 py-1 rounded bg-[#5d4037]">Travel ${timeText}</button>`;
+            let action = '';
+            if (isHere) {
+                action = `<span class="text-xs font-bold text-amber-900">Current Location</span>`;
+            } else if (state.flags.traveledThisYear) {
+                action = `<button disabled class="text-xs bg-gray-400 text-white px-2 py-1 rounded cursor-not-allowed">Travelled (Wait 1yr)</button>`;
+            } else {
+                action = `<button onclick="attemptTravel(${index})" class="text-xs bg-leather text-white px-2 py-1 rounded bg-[#5d4037]">Travel ${timeText}</button>`;
+            }
             
             return `
                 <div class="city-card ${extraClass}">
@@ -2292,6 +2310,11 @@
 
     function attemptTravel(index) {
         if (!checkAge(8)) return;
+        
+        if (state.flags.traveledThisYear) {
+            showMsg("Travel Weary", "You have already undertaken a journey this year. Rest a while.");
+            return;
+        }
 
         state.travelTarget = index;
         
@@ -2299,7 +2322,7 @@
         const city = CITIES[index];
         const currentCity = CITIES[state.location];
         const dist = Math.sqrt(Math.pow(city.x - currentCity.x, 2) + Math.pow(city.y - currentCity.y, 2));
-        const months = Math.ceil(dist / 5);
+        const months = Math.min(10, Math.ceil(dist / 5));
         const cost = months * 5;
         
         if (state.gold < cost) {
@@ -2322,10 +2345,11 @@
         const city = CITIES[index];
         const currentCity = CITIES[state.location];
         const dist = Math.sqrt(Math.pow(city.x - currentCity.x, 2) + Math.pow(city.y - currentCity.y, 2));
-        const months = Math.ceil(dist / 5);
+        const months = Math.min(10, Math.ceil(dist / 5));
         const cost = months * 5;
         
         state.gold -= cost;
+        state.flags.traveledThisYear = true;
         log(`<strong>Travel:</strong> You paid ${cost}g and journeyed to ${city.name}. It took ${months} months.`);
         state.location = index;
         
@@ -2372,18 +2396,19 @@
                 </div>
             `;
         } else if (state.location === r.locationIndex) {
+            // LOCAL INTERACTION - Refactored
             actions = `
-                <button onclick="interact('${id}', 'chat')" class="choice-btn text-sm">Chat (Friendly)</button>
-                <button onclick="interact('${id}', 'joke')" class="choice-btn text-sm">Joke (Funny)</button>
-                <button onclick="interact('${id}', 'insult')" class="choice-btn text-sm">Insult (Mean)</button>
-                <button onclick="interact('${id}', 'flirt')" class="choice-btn text-sm">Flirt (Romance)</button>
-                <button onclick="interact('${id}', 'gift')" class="choice-btn text-sm">Gift (5g)</button>
+                <button onclick="startInteraction('${id}')" class="col-span-2 choice-btn text-lg justify-center bg-amber-900 border-amber-950 text-[#f4e4bc] hover:bg-amber-800 mb-2">
+                    ⚔️ Approach
+                </button>
+                <button onclick="interact('${id}', 'gift')" class="choice-btn text-sm justify-center">🎁 Gift (5g)</button>
             `;
             if (isKnight && state.age >= 12 && state.occupation?.id !== 'squire') {
-                actions += `<button onclick="attemptJob('squire')" class="choice-btn text-sm mt-2 bg-amber-800">Ask to Squire</button>`;
+                actions += `<button onclick="attemptJob('squire')" class="choice-btn text-sm bg-blue-900 text-white">🛡️ Ask to Squire</button>`;
             }
         } else {
-            actions = `<button onclick="interact('${id}', 'letter')" class="choice-btn text-sm">Send Letter (1g)</button>`;
+            // DISTANT INTERACTION
+            actions = `<button onclick="interact('${id}', 'letter')" class="col-span-2 choice-btn text-sm justify-center">🕊️ Send Letter (1g)</button>`;
         }
 
         const hpDisplay = r.health === "Deceased" ? "Deceased" : `${r.hp}/${r.maxHp}`;
@@ -2424,6 +2449,126 @@
         `;
         document.getElementById('npc-content').innerHTML = html;
         document.getElementById('npc-modal').classList.remove('hidden');
+    }
+
+    /**
+     * DYNAMIC INTERACTION ENGINE
+     * Generates a unique event based on relationship archetype and Age.
+     */
+    function startInteraction(id) {
+        closeNPC();
+        switchTab('log');
+        const r = state.relationships.find(x => x.id === id);
+        if(!r) return;
+
+        // 1. Analyze Context
+        const isEnemy = r.friendship <= -20;
+        const isLover = r.romance > 40;
+        const isSpouse = r.relation === 'Spouse';
+        const isFriend = r.friendship >= 30;
+        const isFamily = r.isFamily || r.isBlood;
+
+        // 2. Determine Age Bracket
+        const isChild = state.age < 13;
+        const isTeen = state.age >= 13 && state.age < 18;
+        const isAdult = state.age >= 18;
+
+        // 3. Early Exit for Infants
+        if (state.age < 4) {
+            log(`You gurgle happily at ${r.name}. They pat your head awkwardly.`);
+            return;
+        }
+
+        let evt = null;
+
+        // --- ENEMY ARCHETYPE ---
+        if (isEnemy) {
+            if (isAdult || isTeen) {
+                evt = createEvent(`int_enemy_${id}`, `Confrontation: ${r.name}`, `${r.name} sneers as you approach. "Lost your way, fool?"`, [
+                    { text: 'Duel (Combat)', type: 'check', stat: 'str', dc: 12, success: `You batter them into submission!`, fail: `They thrash you soundly.`, onSuccess: () => { modRel(id, -10); takeDamage(2); modRep('renown', 5); }, onFail: () => { takeDamage(8); modRep('infamy', 2); } },
+                    { text: 'Insult (Wit)', type: 'check', stat: 'int', dc: 13, success: `Your wit cuts deeper than a knife.`, fail: `You stutter and look weak.`, onSuccess: () => { modRel(id, -15); modRep('renown', 2); }, onFail: () => { modRep('honor', -2); } },
+                    { text: 'Intimidate', type: 'check', stat: 'cha', dc: 14, success: `They back down, terrified.`, fail: `They laugh in your face.`, onSuccess: () => { modRel(id, -5); modRep('infamy', 5); }, onFail: () => {} }
+                ]);
+            } else {
+                // Child Enemy
+                evt = createEvent(`int_enemy_kid_${id}`, `Bully: ${r.name}`, `${r.name} sticks their tongue out at you.`, [
+                    { text: 'Push', type: 'check', stat: 'str', dc: 10, success: `You push them into the mud!`, fail: `They push you back harder.`, onSuccess: () => { modRel(id, -5); }, onFail: () => { takeDamage(1); } },
+                    { text: 'Tell Adult', type: 'check', stat: 'cha', dc: 12, success: `They get in trouble!`, fail: `No one listens.`, onSuccess: () => { modRel(id, -10); }, onFail: () => {} }
+                ]);
+            }
+        } 
+        // --- LOVER / SPOUSE ARCHETYPE ---
+        else if (isSpouse || isLover) {
+            const title = isSpouse ? 'Spouse' : 'Lover';
+            if (isAdult || isTeen) {
+                let choices = [];
+                // 1. Woo/Intimacy
+                choices.push({ text: 'Woo & Romance', type: 'check', stat: 'cha', dc: 12, success: `Sparks fly! (+Romance, +Sanity)`, fail: `It falls flat.`, onSuccess: () => { modRel(id, 5, 10); modSanity(2); }, onFail: () => modRel(id, 0, -2) });
+                
+                // 2. Deep Talk
+                choices.push({ text: 'Deep Conversation', type: 'check', stat: 'wis', dc: 10, success: `You bond over shared dreams. (+Friendship)`, fail: `You argue instead.`, onSuccess: () => { modRel(id, 10); modSanity(1); }, onFail: () => { modRel(id, -5); } });
+                
+                // 3. Special: Propose or Family Time
+                if (!isSpouse && isLover && state.age >= 16) {
+                    choices.push({ 
+                        text: 'Propose Marriage', 
+                        type: 'check', stat: 'cha', dc: 15, 
+                        req: (s) => s.gold >= 50, // Ring cost?
+                        success: `YES! You are now betrothed!`, 
+                        fail: `They are not ready...`, 
+                        onSuccess: () => { marryNPC(id); }, 
+                        onFail: () => { modRel(id, -10, -5); } 
+                    });
+                } else if (isSpouse) {
+                     choices.push({ text: 'Start a Family', type: 'check', stat: 'con', dc: 12, req: (s) => s.age < 50, success: `A child is on the way!`, fail: `Not this time.`, onSuccess: () => { log("You try for an heir."); }, onFail: () => {} });
+                } else {
+                     choices.push({ text: 'Spend Time', type: 'flavor', effect: () => { log(`You spend a quiet moment with ${r.name}.`); modSanity(2); } });
+                }
+
+                evt = createEvent(`int_love_${id}`, `${title}: ${r.name}`, `${r.name} smiles warmly as you approach.`, choices);
+            } else {
+                // Child "Crush"
+                 evt = createEvent(`int_crush_${id}`, `Crush: ${r.name}`, `You feel butterflies near ${r.name}.`, [
+                    { text: 'Give Flower', type: 'check', stat: 'cha', dc: 10, success: `They blush.`, fail: `They think it's weird.`, onSuccess: () => modRel(id, 5), onFail: () => modRel(id, -2) },
+                    { text: 'Run Away', type: 'flavor', effect: () => log("You panic and run.") }
+                 ]);
+            }
+        }
+        // --- FRIEND ARCHETYPE ---
+        else if (isFriend) {
+            if (isAdult) {
+                evt = createEvent(`int_friend_${id}`, `Friend: ${r.name}`, `You meet ${r.name} at the tavern.`, [
+                    { text: 'Drink Ale', type: 'check', stat: 'con', dc: 12, success: `A hearty night! (+Sanity)`, fail: `Hangover. (-HP)`, onSuccess: () => { modSanity(3); modRel(id, 5); }, onFail: () => { takeDamage(2); } },
+                    { text: 'Gossip', type: 'check', stat: 'int', dc: 12, success: `You learn secrets. (+1 INT)`, fail: `Boring news.`, onSuccess: () => state.stats.int++, onFail: () => {} },
+                    { text: 'Borrow Gold', type: 'check', stat: 'cha', dc: 15, success: `They lend you 10g.`, fail: `They refuse.`, onSuccess: () => { state.gold+=10; modRel(id, -5); }, onFail: () => modRel(id, -2) }
+                ]);
+            } else {
+                // Child Friend
+                evt = createEvent(`int_friend_kid_${id}`, `Friend: ${r.name}`, `You meet ${r.name} to play.`, [
+                    { text: 'Play Tag', type: 'check', stat: 'dex', dc: 12, success: `You are too fast! (+1 DEX)`, fail: `You trip.`, onSuccess: () => state.stats.dex++, onFail: () => takeDamage(1) },
+                    { text: 'Share Toy', type: 'check', stat: 'cha', dc: 10, success: `Best friends forever.`, fail: `They break it.`, onSuccess: () => modRel(id, 10), onFail: () => modRel(id, -5) }
+                ]);
+            }
+        }
+        // --- NEUTRAL / FAMILY ---
+        else {
+            evt = createEvent(`int_neut_${id}`, `Meeting: ${r.name}`, `You approach ${r.name}.`, [
+                { text: 'Chat', type: 'check', stat: 'cha', dc: 10, success: `Pleasant conversation. (+Rel)`, fail: `Awkward silence.`, onSuccess: () => modRel(id, 5), onFail: () => {} },
+                { text: 'Joke', type: 'check', stat: 'cha', dc: 12, success: `They laugh! (+Rel)`, fail: `Crickets.`, onSuccess: () => modRel(id, 8), onFail: () => modRel(id, -2) },
+                { text: 'Insult', type: 'check', stat: 'cha', dc: 10, success: `You mocked them good. (+Fun)`, fail: `They slap you.`, onSuccess: () => modSanity(1), onFail: () => takeDamage(1) }
+            ]);
+        }
+
+        renderEvent(evt);
+    }
+
+    function marryNPC(id) {
+        const r = state.relationships.find(x => x.id === id);
+        if(!r) return;
+        r.relation = 'Spouse';
+        state.flags.married = true;
+        log(`<strong style="color:var(--gold)">MARRIAGE:</strong> You and ${r.name} are joined in holy matrimony!`);
+        updateUI();
     }
 
     function getRelLabel(val) {
@@ -2494,13 +2639,34 @@
         } else {
             const occ = state.occupation;
             const jobData = CAREERS[occ.id].ranks[occ.rankIndex];
+            const jobName = CAREERS[occ.id].name;
+            
+            // CO-WORKER LOGIC
+            const coworkers = state.relationships.filter(r => r.occupation === jobName && r.locationIndex === state.location && r.health !== 'Deceased');
+            
+            let coworkersHtml = '<div class="mt-4 pt-4 border-t border-black/20"><h4 class="font-bold mb-2">Co-workers</h4>';
+            if (coworkers.length === 0) {
+                coworkersHtml += '<p class="text-xs italic opacity-70 mb-2">You haven\'t bonded with anyone here yet.</p>';
+            } else {
+                coworkersHtml += '<div class="grid grid-cols-2 gap-2 mb-2">';
+                coworkersHtml += coworkers.map(r => `
+                    <div class="p-2 border border-black/10 rounded bg-white/30 cursor-pointer hover:bg-white/60 flex justify-between items-center" onclick="openNPC('${r.id}')">
+                        <div class="font-bold text-xs truncate mr-1">${r.name}</div>
+                        <div class="text-[10px] opacity-70">${getRelLabel(r.friendship)}</div>
+                    </div>
+                `).join('');
+                coworkersHtml += '</div>';
+            }
+            coworkersHtml += `<button onclick="meetCoworker()" class="choice-btn text-xs w-full justify-center bg-[#5d4037]">Socialize with Colleagues</button></div>`;
+
             container.innerHTML = `
                 <div class="job-card">
                     <h3 class="font-bold text-xl">${jobData.title}</h3>
-                    <p class="text-sm opacity-70">${CAREERS[occ.id].name} - Rank ${occ.rankIndex + 1}</p>
+                    <p class="text-sm opacity-70">${jobName} - Rank ${occ.rankIndex + 1}</p>
                     <div class="mt-2 text-sm">Wage: ${jobData.wage} GP/yr</div>
                     <div class="mt-4"><div class="text-xs flex justify-between"><span>Performance</span><span>${occ.performance}%</span></div><div class="bar-container"><div class="bar-fill perf-fill" style="width: ${occ.performance}%"></div></div></div>
                     <div class="mt-2"><div class="text-xs flex justify-between"><span>Stress</span><span>${occ.stress}%</span></div><div class="bar-container"><div class="bar-fill stress-fill" style="width: ${occ.stress}%"></div></div></div>
+                    ${coworkersHtml}
                 </div>
                 <div class="flex gap-2 text-xs mb-4">
                     <button onclick="setStance('slack')" class="p-2 border rounded ${occ.workStance==='slack'?'bg-amber-300':'bg-white'}">Slack</button>
@@ -2510,6 +2676,30 @@
                 <button onclick="quitJob()" class="w-full border border-red-800 text-red-800 p-2 rounded hover:bg-red-100">Quit Job</button>
             `;
         }
+    }
+
+    function meetCoworker() {
+        if(!state.occupation) return;
+        const jobName = CAREERS[state.occupation.id].name;
+        
+        // Chance to meet new person OR pick existing
+        const existing = state.relationships.filter(r => r.occupation === jobName && r.locationIndex === state.location && r.health !== 'Deceased');
+        
+        if (Math.random() < 0.4 || existing.length === 0) {
+             const gender = Math.random() > 0.5 ? 'Male' : 'Female';
+             const name = getRandomName(gender);
+             // Create rel
+             const newCo = addRelationship(name, "Co-worker", 20, gender, "Commoner", state.location);
+             newCo.occupation = jobName; 
+             log(`You met a new co-worker, ${name}.`);
+        } else {
+             const target = existing[Math.floor(Math.random() * existing.length)];
+             // Simple interaction logic without the full interact() overhead to keep context? 
+             // No, user requested log takes them back. So we use standard interaction.
+             log(`You spent time with ${target.name} during work.`);
+             modRel(target.id, 5);
+        }
+        // UI Update handled by log() calling switchTab
     }
 
     function attemptJob(id) {
@@ -2588,89 +2778,30 @@
 
     // --- RELATIONSHIP SYSTEM ---
     function interact(id, action) {
-        const count = state.interactions[id] || 0;
-        if (count >= 3) {
-            showMsg("Limit Reached", "You have interacted enough with this person for the year.");
-            return;
-        }
+        const r = state.relationships.find(x => x.id === id);
+        if(!r) return;
 
-        const rel = state.relationships.find(r => r.id === id);
-        if(!rel) return;
-
-        // AudioEngine.pulse();
-        state.interactions[id] = count + 1;
-        const align = rel.alignment || 'True Neutral';
-        const isEvil = align.includes('Evil');
-        const isGood = align.includes('Good');
-        const isChaotic = align.includes('Chaotic');
-        const isLawful = align.includes('Lawful');
-
-        let msg = "";
-        let mod = 0;
-
-        // Base Logic
-        if (action === 'chat') {
-            mod = 5;
-            if (isGood) mod += 3;
-            if (isEvil) mod -= 2;
-            rel.friendship = Math.min(100, rel.friendship + mod);
-            msg = `You chatted with ${rel.name}.`;
-            modSanity(1);
-        } 
-        else if (action === 'joke') {
-            mod = 5;
-            if (isChaotic) mod += 5;
-            if (isLawful) mod -= 3;
-            rel.friendship = Math.min(100, rel.friendship + mod);
-            msg = `You told a joke to ${rel.name}.`;
-            modSanity(1);
-        }
-        else if (action === 'insult') {
-            mod = -10;
-            if (isEvil) mod = -2; // Evil respects boldness?
-            if (isGood) mod = -15;
-            rel.friendship = Math.max(-100, rel.friendship + mod);
-            msg = `You insulted ${rel.name}.`;
-        }
-        else if (action === 'flirt') {
-            if (rel.friendship > 20) {
-                const roll = rollD20(getModifier(state.stats.cha));
-                if (roll.total > 10) {
-                    rel.romance = Math.min(100, rel.romance + 10);
-                    msg = `You flirted with ${rel.name}. It went well!`;
-                    modSanity(2);
-                } else {
-                    rel.friendship -= 2;
-                    msg = `You flirted, but it was awkward.`;
-                }
-            } else {
-                rel.friendship -= 5;
-                msg = `${rel.name} rejected your advances.`;
-            }
-        }
-        else if (action === 'gift') {
+        // Simplified Interact for Gifts/Letters only
+        if (action === 'gift') {
             if (state.gold >= 5) {
                 state.gold -= 5;
-                rel.friendship = Math.min(100, rel.friendship + 10);
-                if (rel.romance > 0) rel.romance += 5;
-                msg = `You gave ${rel.name} a gift.`;
+                r.friendship = Math.min(100, r.friendship + 10);
+                if (r.romance > 0) r.romance += 5;
+                log(`You gave ${r.name} a gift. They seem pleased.`);
             } else {
-                msg = `Not enough gold.`;
-                state.interactions[id] = count; // Refund check
+                showMsg("Insufficient Funds", "You do not have enough gold.");
             }
         } 
         else if (action === 'letter') {
             if (state.gold >= 1) {
                 state.gold -= 1;
-                rel.friendship = Math.min(100, rel.friendship + 2);
-                msg = `Sent a letter to ${rel.name}.`;
+                r.friendship = Math.min(100, r.friendship + 2);
+                log(`You sent a letter to ${r.name}.`);
             } else {
-                msg = "Not enough gold.";
-                state.interactions[id] = count;
+                showMsg("Insufficient Funds", "You do not have enough gold.");
             }
         }
         
-        log(msg);
         updateUI();
         closeNPC();
         switchTab('log');
@@ -2876,7 +3007,13 @@
     function renderInventory() {
         const list = document.getElementById('inventory-list');
         if (state.inventory.length === 0) { list.innerHTML = `<p class="italic opacity-50">Your satchel is empty.</p>`; return; }
-        list.innerHTML = state.inventory.map((item, idx) => `
+        list.innerHTML = state.inventory.map((item, idx) => {
+            let useBtn = '';
+            if (['Bread', 'Healing Potion', 'Apple', 'Meat'].includes(item.name) || item.rarity === 'Consumable') {
+                useBtn = `<button onclick="useItem(${idx})" class="text-[10px] bg-green-800 text-[#f4e4bc] px-2 py-0.5 rounded hover:opacity-80 mr-1">Use</button>`;
+            }
+
+            return `
             <div class="item-row">
                 <div>
                     <div class="item-rarity-${item.rarity}">${item.name}</div>
@@ -2884,9 +3021,49 @@
                 </div>
                 <div class="flex flex-col items-end">
                     <div class="text-[10px] uppercase font-bold opacity-50 border border-black/20 px-1 rounded mb-1">${item.rarity}</div>
-                    <button onclick="sellItem(${idx})" class="text-[10px] bg-[#2c1e16] text-[#f4e4bc] px-2 py-0.5 rounded hover:opacity-80">Sell (${item.value}g)</button>
+                    <div>
+                        ${useBtn}
+                        <button onclick="sellItem(${idx})" class="text-[10px] bg-[#2c1e16] text-[#f4e4bc] px-2 py-0.5 rounded hover:opacity-80">Sell (${item.value}g)</button>
+                    </div>
                 </div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
+    }
+
+    function useItem(index) {
+        const item = state.inventory[index];
+        let used = false;
+        
+        if (item.name === 'Bread') { 
+            state.health += 2; 
+            log("You ate the fresh bread. (+2 HP)"); 
+            used = true; 
+        }
+        else if (item.name === 'Healing Potion') { 
+            state.health += 10; 
+            log("You drank the red potion. (+10 HP)"); 
+            used = true; 
+        }
+        else if (item.name === 'Apple') {
+            state.health += 1;
+            log("Crunchy. (+1 HP)");
+            used = true;
+        }
+        else if (item.name === 'Meat') {
+            state.health += 5;
+            log("You cooked and ate the meat. (+5 HP)");
+            used = true;
+        }
+
+        if (used) {
+            // Cap Health
+            state.health = Math.min(state.maxHealth, state.health);
+            // Remove item
+            state.inventory.splice(index, 1);
+            updateUI();
+        } else {
+            showMsg("Cannot Use", "You don't know how to use this.");
+        }
     }
 
     // --- CEMETERY TAB ---
@@ -2963,7 +3140,8 @@
             return;
         }
 
-        if (!confirm("This is a heinous act. Are you sure?")) {
+        // CONFIRMATION UPDATE
+        if (!confirm("This is an evil act? Are you sure?")) {
             state.interactions[id] = 0; // Reset if cancelled
             return;
         }
@@ -3081,6 +3259,11 @@
         div.className = 'event-entry';
         div.innerHTML = html;
         logEl.appendChild(div);
+        
+        // AUTO SCROLL
+        logEl.scrollTop = logEl.scrollHeight;
+        // AUTO SWITCH TO LOG TAB
+        switchTab('log');
     }
 
     function updateUI() {
@@ -3098,7 +3281,8 @@
              displayName = `${state.name} the ${title}`;
         } else if (state.socialClass === 'House') {
              // If noble and no job, prefix rank (e.g. Lord Aris)
-             const rank = state.class.split(' ')[0]; 
+             let rank = state.class.split(' ')[0]; 
+             if (rank === 'House') rank = 'Noble'; // Fix for "House Member"
              displayName = `${rank} ${state.name}`;
         }
         document.getElementById('display-name').innerText = displayName;
