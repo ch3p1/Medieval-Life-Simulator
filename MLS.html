@@ -1903,7 +1903,7 @@
         const marker = document.createElement('div');
         marker.className = 'event-entry age-marker';
         marker.innerText = `Age ${state.age}`;
-        logEl.prepend(marker);
+        logEl.appendChild(marker);
 
         // NPC SIMULATION (Updated)
         simulateNPCs();
@@ -2027,7 +2027,7 @@
                 const entry = document.createElement('div');
                 entry.className = 'event-entry npc-log';
                 entry.innerText = evtText;
-                logEl.prepend(entry);
+                logEl.appendChild(entry);
             }
         });
     }
@@ -2984,7 +2984,7 @@
 
     function checkUnlocks() {
         const ul = document.getElementById('unlock-list');
-        const addUnlock = (txt) => { const li = document.createElement('li'); li.innerText = `${txt} (Age ${state.age})`; li.style.color = "var(--ink)"; li.style.fontWeight = "bold"; ul.prepend(li); };
+        const addUnlock = (txt) => { const li = document.createElement('li'); li.innerText = `${txt} (Age ${state.age})`; li.style.color = "var(--ink)"; li.style.fontWeight = "bold"; ul.appendChild(li); };
         if (state.age === 4) addUnlock("Temple Blessings");
         if (state.age === 6) { addUnlock("Basic Training"); state.flags.literate = true; }
         if (state.age === 8) addUnlock("Petty Crime");
@@ -3046,7 +3046,7 @@
         const div = document.createElement('div');
         div.className = 'event-entry';
         div.innerHTML = html;
-        logEl.prepend(div);
+        logEl.appendChild(div);
     }
 
     function updateUI() {
